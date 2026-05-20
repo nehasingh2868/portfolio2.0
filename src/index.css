@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+@keyframes scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(calc(-50% - 12px));
+  }
+}
+
+@utility animate-scroll {
+  animation: scroll 30s linear infinite;
+}
+
+/* Custom follower cursor styling in orange */
+.custom-cursor {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #EA580C;
+  border-radius: 50%;
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: width 0.3s, height 0.3s, background-color 0.3s;
+}
+
+.custom-cursor-dot {
+  width: 6px;
+  height: 6px;
+  background-color: #EA580C;
+  border-radius: 50%;
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+}
+
+.custom-cursor-active {
+  width: 40px;
+  height: 40px;
+  background-color: rgba(234, 88, 12, 0.1);
+  border-color: #EA580C;
+}
+
+@keyframes scroll-right {
+  0% {
+    transform: translateX(calc(-50%));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@utility animate-scroll-right {
+  animation: scroll-right 25s linear infinite;
+}
+
+/* Diamond grid using orange/coral tint */
+@utility diamond-grid {
+  background-image: 
+    linear-gradient(45deg, rgba(234, 88, 12, 0.02) 1px, transparent 1px),
+    linear-gradient(-45deg, rgba(234, 88, 12, 0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+  background-position: center;
+}
+
+@utility mobile-card-stack {
+  @media (max-width: 767px) {
+    position: sticky;
+  }
+}
+
+@utility glow-btn {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  &:hover {
+    box-shadow: 0 0 20px rgba(234, 88, 12, 0.4);
+    transform: translateY(-2px);
+  }
+}
