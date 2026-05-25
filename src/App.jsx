@@ -2,6 +2,83 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence, useScroll, useTransform, useMotionValue } from 'framer-motion'
 import { gsap } from 'gsap'
 
+export const SUBMISSION_CONFIG = {
+  // Option 1: Direct Webhook (Zapier, Make.com, Pabbly, etc.)
+  webhookUrl: 'https://hooks.zapier.com/hooks/catch/27724194/4o0yp1h/', 
+
+  // Option 2: Supabase Database Configuration
+  supabaseUrl: '',
+  supabaseAnonKey: '',
+  supabaseTable: 'leads',
+
+  // Option 3: Google Sheets Apps Script URL (Active Fallback)
+  googleSheetsUrl: 'https://script.google.com/macros/s/AKfycbyv5rQZcQ8WlWv5x9f4m2S8R8gX_P9s7N15hL-B2m6Zg3s8Z8/exec'
+}
+
+export async function submitLeadData(formData) {
+  // 1. Webhook Option (Zapier / Make / custom)
+  if (SUBMISSION_CONFIG.webhookUrl) {
+    const searchParams = new URLSearchParams()
+    searchParams.append('timestamp', new Date().toISOString())
+    searchParams.append('name', formData.name || '')
+    searchParams.append('phone', formData.phone || '')
+    searchParams.append('email', formData.email || '')
+    searchParams.append('website', formData.website || '')
+    searchParams.append('industry', formData.industry || '')
+    searchParams.append('budget', formData.budget || '')
+    searchParams.append('source', formData.source || '')
+    searchParams.append('message', formData.message || '')
+
+    const response = await fetch(SUBMISSION_CONFIG.webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: searchParams.toString()
+    })
+    if (!response.ok) {
+      throw new Error(`Webhook failed with status: ${response.status}`)
+    }
+    return
+  }
+
+  // 2. Supabase REST API Option
+  if (SUBMISSION_CONFIG.supabaseUrl && SUBMISSION_CONFIG.supabaseAnonKey) {
+    // Normalise trailing slash
+    const cleanUrl = SUBMISSION_CONFIG.supabaseUrl.replace(/\/$/, '')
+    const url = `${cleanUrl}/rest/v1/${SUBMISSION_CONFIG.supabaseTable}`
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'apikey': SUBMISSION_CONFIG.supabaseAnonKey,
+        'Authorization': `Bearer ${SUBMISSION_CONFIG.supabaseAnonKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(formData)
+    })
+    if (!response.ok) {
+      const errText = await response.text()
+      throw new Error(`Supabase insert failed: ${errText}`)
+    }
+    return
+  }
+
+  // 3. Fallback: Google Sheets Apps Script URL
+  if (SUBMISSION_CONFIG.googleSheetsUrl) {
+    const payload = new URLSearchParams()
+    Object.entries(formData).forEach(([key, val]) => payload.append(key, val))
+    await fetch(SUBMISSION_CONFIG.googleSheetsUrl, {
+      method: 'POST',
+      body: payload,
+      mode: 'no-cors'
+    })
+    return
+  }
+
+  throw new Error('No lead submission channels are configured in SUBMISSION_CONFIG.')
+}
+
 const services = [
   {
     title: 'Meta Ads',
@@ -32,6 +109,16 @@ const services = [
     title: 'Funnel Optimization',
     desc: 'Complete customer journey optimization from click to purchase.',
     icon: '🔄'
+  },
+  {
+    title: 'Website Development',
+    desc: 'Custom high-performance Shopify & custom web setups built for extreme conversion rates.',
+    icon: '💻'
+  },
+  {
+    title: 'Content Creation',
+    desc: 'High-converting UGC, product shoots, and viral reels designed to hook attention instantly.',
+    icon: '🎥'
   }
 ]
 
@@ -59,10 +146,55 @@ const stats = [
 ]
 
 const caseStudiesData = {
+  clothing: [
+    {
+      brand: 'Bunaiwala.com',
+      category: 'clothing',
+      title: 'CRO + UGC Overhaul',
+      result: 'Audited the full store, introduced a UGC-first creative strategy, restructured Meta campaigns with a TOFU-MOFU-BOFU funnel, and optimized product pages with trust badges and urgency elements. Achieved a massive 4.7x revenue scale.',
+      insights: 'Audited the full Shopify store to identify CRO gaps in the PDP, cart page, and checkout flow. Introduced a UGC-first creative strategy showcasing authentic handloom cotton sarees and ethnic wear with real customer reviews and hooks. Rebuilt Meta advertising campaigns using a TOFU-MOFU-BOFU funnel structure, optimized product pages (images, trust badges, urgency elements), and implemented a prepaid incentive strategy to boost prepaid conversion rates.',
+      image: '/bunaiwala-banner.png',
+      metrics: ['4.7x Revenue Growth', '+150% Order Growth', '40.05% Conversion Rate', '42.48% Prepaid Share'],
+      services: ['Shopify CRO', 'UGC Ads Strategy', 'Meta Funnels', 'Prepaid Share Scaling'],
+      useScreenshots: true,
+      screenshots: ['/bunaiwala-before.png', '/bunaiwala-after.png'],
+      shopifyData: [150, 280, 400, 550, 710, 890, 1100],
+      metaData: [60, 90, 130, 170, 220, 290, 360]
+    },
+    {
+      brand: 'Kalki Vastra',
+      category: 'clothing',
+      title: 'Zero to Scale in 18 Days',
+      result: 'Took a brand new store with zero sales history and scaled it from 2 daily orders to 98 daily orders in just 18 days, reaching ₹1,39,900 in daily gross revenue with broad Advantage+ campaign structures.',
+      insights: 'Built Meta campaigns from scratch utilizing broad targeting with Advantage+ from day one. Created a rapid-test creative framework launching 8 creatives in the first week to find winners fast, scaling winning creatives aggressively once cost-per-purchase (CPP) data stabilized after Day 5 while maintaining consistent daily sales flow without relying on single-spike events.',
+      image: '/kalkivastra-banner.png',
+      metrics: ['66x Revenue Growth', '6,981 Daily Sessions', '98 Daily Orders', '18 Days to Scale'],
+      services: ['Meta Ads Scaling', 'Advantage+ Campaigns', 'Creative Testing Framework'],
+      useScreenshots: true,
+      screenshots: ['/kalkivastra-beforeafter.png'],
+      shopifyData: [150, 280, 400, 550, 710, 890, 1100],
+      metaData: [60, 90, 130, 170, 220, 290, 360]
+    },
+    {
+      brand: 'Indibelle.in',
+      category: 'clothing',
+      title: 'Crossed ₹1 Crore — Monthly Scale Achievement',
+      result: 'Systematically scaled a premium D2C apparel store beyond the ₹1 Crore/month mark within 30 days, stabilizing daily run rates to eliminate dead days and push prepaid share to 35%.',
+      insights: 'Built a full 30-day creative calendar with new angles every week to avoid creative fatigue. Scaled Meta budget systematically starting at ₹25K/day, reaching ₹45K/day by week 3. Implemented a 35% prepaid push via limited-time offers and checkout incentives. Maintained a consistent ₹2.5L-₹4.5L daily run rate with no dead days in the entire month, utilizing session data (3.69L sessions) to optimize landing pages and ad-to-page alignment.',
+      image: '/indibelle-banner.png',
+      metrics: ['₹1.058Cr Revenue', '+28% MoM Growth', '5,907 Total Orders', '35% Prepaid Share'],
+      services: ['Scale Strategy', 'Meta Ads Scaling', 'Prepaid Optimization', 'Creative Calendar'],
+      useScreenshots: true,
+      screenshots: ['/indibelle-beforeafter.png'],
+      shopifyData: [90, 150, 180, 260, 340, 450, 580],
+      metaData: [35, 50, 65, 90, 120, 160, 210]
+    }
+  ],
   jewelry: [
     {
       brand: 'Aura Jewels',
       category: 'jewelry',
+      title: 'Premium Brand Elevate',
       result: 'Scaled monthly revenue from ₹5L to ₹32L with a 4.2X ROAS.',
       insights: 'Leveraged high-visual UGC creatives showing jewelry shine under natural light. Built dedicated high-speed landing pages to highlight product premium quality, increasing average order value (AOV) by 32%.',
       image: 'https://images.unsplash.com/photo-1617038220319-276d3cfab638?q=80&w=1200&auto=format&fit=crop',
@@ -74,6 +206,7 @@ const caseStudiesData = {
     {
       brand: 'Vedic Gold',
       category: 'jewelry',
+      title: 'Direct-to-Consumer Acquisition Scaling',
       result: 'Reduced acquisition cost (CPA) by 46% while scaling sales volume.',
       insights: 'Implemented custom funnel targeting collectors of traditional designs. Restructured the meta account using Advantage+ campaigns paired with high-intent catalog sales.',
       image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=1200&auto=format&fit=crop',
@@ -85,6 +218,7 @@ const caseStudiesData = {
     {
       brand: 'Luna Silver Co.',
       category: 'jewelry',
+      title: 'Micro-Influencer Acquisition Engine',
       result: 'Achieved ₹18L/mo revenue starting from scratch in 90 days.',
       insights: 'Focused on micro-influencer gifting campaigns. Used the generated video assets in TikTok/Instagram Reels Ads leading to direct checkouts on mobile-first landing pages.',
       image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?q=80&w=1200&auto=format&fit=crop',
@@ -94,80 +228,11 @@ const caseStudiesData = {
       metaData: [15, 30, 40, 60, 95, 120, 160]
     }
   ],
-  clothing: [
-    {
-      brand: 'Urban Thread',
-      category: 'clothing',
-      result: 'Scaled to ₹45L monthly revenue using Meta Ads and Email retention flows.',
-      insights: 'Developed structured retention flows (welcome series, abandoned cart, win-back) which generated 28% of total revenue. Ran broad Meta targeting to capture massive top-of-funnel traffic.',
-      image: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?q=80&w=1200&auto=format&fit=crop',
-      metrics: ['4.8X ROAS', '₹45L Revenue', '28% Email Revenue'],
-      services: ['Meta Ads', 'Email Marketing', 'Funnel Optimization'],
-      shopifyData: [150, 280, 400, 550, 710, 890, 1100],
-      metaData: [60, 90, 130, 170, 220, 290, 360]
-    },
-    {
-      brand: 'Luxe Wardrobe',
-      category: 'clothing',
-      result: '3.6X ROAS on Google PMax and Shopping Campaigns.',
-      insights: 'Optimized the product feed titles with high-search keywords. Retargeted high-intent cart abandoners using dynamic catalog ads on Instagram and Facebook.',
-      image: 'https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?q=80&w=1200&auto=format&fit=crop',
-      metrics: ['3.6X ROAS', '₹25L Revenue', '45% Google Search CTR'],
-      services: ['Google Ads', 'Meta Ads', 'Landing Page CRO'],
-      shopifyData: [90, 150, 180, 260, 340, 450, 580],
-      metaData: [35, 50, 65, 90, 120, 160, 210]
-    },
-    {
-      brand: 'FitWear Active',
-      category: 'clothing',
-      result: 'Lowered CPA by 38% through a systematic creative testing framework.',
-      insights: 'Tested 15 new hooks weekly to beat ad fatigue. Found winning creatives and scaled them using a horizontal scaling strategy (combining multiple high-performing lookalike audiences).',
-      image: 'https://images.unsplash.com/photo-1518310383802-640c2de311b2?q=80&w=1200&auto=format&fit=crop',
-      metrics: ['38% Lower CPA', '4.4X ROAS', '150% Volume Boost'],
-      services: ['Meta Ads', 'Creative Strategy', 'Funnel Optimization'],
-      shopifyData: [70, 110, 160, 230, 320, 420, 560],
-      metaData: [25, 40, 55, 80, 110, 150, 195]
-    }
-  ],
-  real_estate: [
-    {
-      brand: 'Elysian Heights',
-      category: 'real_estate',
-      result: 'Generated 450+ high-quality luxury property leads at ₹120 CPL.',
-      insights: 'Used Meta Lead Form campaigns with custom qualifiers to filter out low-intent buyers. Followed up with WhatsApp automation to schedule property walkthroughs.',
-      image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?q=80&w=1200&auto=format&fit=crop',
-      metrics: ['450+ Leads', '₹120 CPL', '18% Site Visit Rate'],
-      services: ['Meta Ads', 'Funnel Optimization', 'Creative Strategy'],
-      shopifyData: [50, 95, 140, 185, 230, 310, 450],
-      metaData: [20, 35, 50, 70, 90, 125, 160]
-    },
-    {
-      brand: 'Terra Developers',
-      category: 'real_estate',
-      result: 'Sold out a premium villa project in Bangalore in 45 days using Google Search.',
-      insights: 'Targeted high-intent long-tail keywords (e.g. "luxury 4bhk villas in Bangalore"). Built high-converting landing pages featuring interactive maps and 3D walkthroughs.',
-      image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1200&auto=format&fit=crop',
-      metrics: ['100% Sold Out', '₹80Cr Portfolio', '8.5% Lead to Sale'],
-      services: ['Google Ads', 'Landing Page CRO', 'Funnel Optimization'],
-      shopifyData: [30, 60, 90, 130, 180, 220, 300],
-      metaData: [10, 20, 35, 50, 70, 90, 115]
-    },
-    {
-      brand: 'Vertex Spaces',
-      category: 'real_estate',
-      result: 'Cost per qualified booking reduced by 52% using YouTube Ads.',
-      insights: 'Developed high-production property tour videos showing local amenities. Directed traffic to a WhatsApp business chat to automate booking bookings.',
-      image: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?q=80&w=1200&auto=format&fit=crop',
-      metrics: ['52% Lower CPL', '140 Bookings', '6.8X ROI'],
-      services: ['Google Ads', 'Creative Strategy', 'Funnel Optimization'],
-      shopifyData: [45, 75, 110, 150, 190, 250, 340],
-      metaData: [18, 28, 42, 60, 78, 100, 135]
-    }
-  ],
-  other: [
+  others: [
     {
       brand: 'Skin Glow D2C',
-      category: 'other',
+      category: 'others',
+      title: 'Skincare Conversion Booster',
       result: 'D2C Skincare brand scaled from ₹1.5L to ₹12L/mo in 60 days.',
       insights: 'Ran aggressive Meta advantage targeting combined with educational product-comparison creatives. Set up post-purchase email upsells to boost lifetime value.',
       image: 'https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?q=80&w=1200&auto=format&fit=crop',
@@ -178,7 +243,8 @@ const caseStudiesData = {
     },
     {
       brand: 'NutriFit Foods',
-      category: 'other',
+      category: 'others',
+      title: 'Subscription Funnel Scale',
       result: 'Scaled subscription model by 210% with Google & Meta Ads.',
       insights: 'Created custom subscription landing pages. Optimized the funnel to reduce checkout friction, resulting in a 2.4X improvement in conversion rates.',
       image: 'https://images.unsplash.com/photo-1543362906-acfc16c67564?q=80&w=1200&auto=format&fit=crop',
@@ -189,7 +255,8 @@ const caseStudiesData = {
     },
     {
       brand: 'SoleStyle Shoes',
-      category: 'other',
+      category: 'others',
+      title: 'Footwear Scale Engine',
       result: 'Bootstrapped foot-wear brand hit ₹30L monthly revenue.',
       insights: 'Focused on Instagram-native shopping integration. Targeted competitive brand keywords on Google Search to capture high-intent demand.',
       image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=1200&auto=format&fit=crop',
@@ -227,12 +294,12 @@ const reviews = [
 const duplicatedReviews = [...reviews, ...reviews]
 
 const ribbonServices = [
-  'Meta Ads', 'Google Ads', 'Creative Strategy', 'Landing Page CRO', 'Email Marketing', 'Funnel Optimization'
+  'Meta Ads', 'Google Ads', 'Creative Strategy', 'Landing Page CRO', 'Email Marketing', 'Funnel Optimization', 'Website Development', 'Content Creation'
 ]
 const duplicatedRibbon = [...ribbonServices, ...ribbonServices, ...ribbonServices, ...ribbonServices, ...ribbonServices]
 
-const brands1 = ['Zara', 'Vogue', 'Gucci', 'Tanishq', 'Mejuri', 'Prada', 'Mango', 'Nike']
-const brands2 = ['Armani', 'Chanel', 'Cartier', 'Sabyasachi', 'Rolex', 'Dior', 'H&M', 'Adidas']
+const brands1 = ['Bunaiwala.com', 'Kalki Vastra', 'Indibelle.in', 'Fine Silver Jewels', 'Anayna', 'Idaho']
+const brands2 = ['Vaasvajaipur', 'Sugnaa', 'Vasant Apparels', 'Gems Paradise', 'Mirasa Jewels', 'Deasha India']
 const duplicatedBrands1 = [...brands1, ...brands1, ...brands1, ...brands1]
 const duplicatedBrands2 = [...brands2, ...brands2, ...brands2, ...brands2]
 
@@ -251,12 +318,12 @@ function Logo({ className = '' }) {
       
       {/* Logo Text: D2c in orange, Grow in white */}
       <div className="flex flex-col justify-center leading-none">
-        <div className="text-lg md:text-xl font-extrabold tracking-tight font-sans">
+        <div className="text-lg md:text-xl font-black tracking-tight font-sans">
           <span className="text-[#EA580C]">D2c</span>
-          <span className="text-white">Grow</span>
+          <span className="text-white"> Grow</span>
         </div>
-        <span className="text-[6.5px] text-gray-500 font-bold uppercase tracking-[0.18em] font-sans mt-0.5 leading-none">
-          PERFORMANCE AGENCY
+        <span className="text-[7px] text-[#999999] tracking-[0.25em] font-sans font-bold uppercase mt-1 select-none">
+          ADS THAT BUILD BRANDS.
         </span>
       </div>
     </div>
@@ -275,7 +342,7 @@ function TextLoop() {
   }, [])
 
   return (
-    <span className="relative inline-block overflow-hidden h-[1.25em] w-[210px] sm:w-[260px] md:w-[380px] lg:w-[460px] align-bottom select-none">
+    <span className="relative inline-block overflow-hidden h-[1.45em] w-[180px] xs:w-[210px] sm:w-[270px] md:w-[380px] lg:w-[480px] align-middle select-none">
       <AnimatePresence mode="wait">
         <motion.span
           key={index}
@@ -283,7 +350,7 @@ function TextLoop() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -20, opacity: 0 }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="absolute inset-0 flex items-center justify-center w-full whitespace-nowrap text-center text-white"
+          className="absolute inset-0 flex items-center justify-start text-left px-1 w-full whitespace-nowrap text-white"
         >
           {words[index]}
         </motion.span>
@@ -506,6 +573,400 @@ function StickyCard({ num, title, desc, index }) {
   )
 }
 
+function CaseStudyCard({ study, index, onClick }) {
+  return (
+    <div className="bg-white text-slate-900 rounded-[32px] border border-slate-200/60 p-6 md:p-10 shadow-[0_10px_30px_rgba(0,0,0,0.03)] grid grid-cols-1 lg:grid-cols-12 gap-8 items-center hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] transition-all duration-500 mb-10 w-full text-left">
+      
+      {/* Left side info */}
+      <div className="lg:col-span-7 flex flex-col justify-between h-full space-y-6">
+        <div>
+          {/* Header row */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-8 h-8 rounded-full bg-orange-500/10 text-orange-600 flex items-center justify-center font-bold text-sm">
+              {study.brand.charAt(0)}
+            </div>
+            <div>
+              <p className="text-[10px] text-slate-400 font-mono tracking-widest uppercase">CASE STUDY 0{index + 1} • {study.category}</p>
+              <h4 className="text-base font-bold text-slate-950 leading-tight">{study.brand}</h4>
+            </div>
+          </div>
+
+          {/* Title */}
+          <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight mb-4 uppercase">
+            {study.title}
+          </h3>
+
+          {/* Description */}
+          <p className="text-slate-500 text-xs sm:text-sm font-light leading-relaxed mb-6">
+            {study.result}
+          </p>
+        </div>
+
+        {/* Metrics Row */}
+        <div className="border-t border-b border-slate-100 py-4 mb-6 flex flex-wrap gap-6 items-center">
+          {study.metrics.map((metric, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-600 text-sm">
+                {idx === 0 ? '📈' : idx === 1 ? '⚡' : '💰'}
+              </div>
+              <div>
+                <p className="text-xs font-black text-slate-900 tracking-tight leading-none uppercase">{metric}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Impact Highlight line & Button */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <p className="text-xs font-bold text-slate-900 font-sans tracking-wide">
+            IMPACT: <span className="text-orange-600">{study.metrics[0]}</span>
+          </p>
+          <button 
+            onClick={onClick}
+            className="px-6 py-3 rounded-full bg-slate-950 text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all duration-300 hover:bg-orange-600 shadow-[0_4px_15px_rgba(0,0,0,0.15)] flex items-center gap-2 cursor-pointer group"
+          >
+            View Full Case Study
+            <span className="transform group-hover:translate-x-1 transition-transform">→</span>
+          </button>
+        </div>
+
+      </div>
+
+      {/* Right side image */}
+      <div className="lg:col-span-5 h-[280px] sm:h-[350px] rounded-3xl overflow-hidden shadow-inner relative">
+        <img 
+          src={study.image} 
+          alt={study.brand} 
+          className="w-full h-full object-cover" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+      </div>
+
+    </div>
+  )
+}
+
+function StickyWhatsAppButton() {
+  return (
+    <a 
+      href="https://wa.me/919352234643?text=Hi%2C%20I%20want%20to%20know%20how%20you%20can%20help%20scale%20my%20brand."
+      target="_blank"
+      rel="noopener noreferrer"
+      className="fixed bottom-6 right-6 z-[200] w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-[0_4px_20px_rgba(37,211,102,0.3)] hover:scale-110 hover:shadow-[0_4px_30px_rgba(37,211,102,0.5)] transition-all duration-300 group cursor-pointer"
+      title="Chat with us on WhatsApp"
+    >
+      <svg className="w-8 h-8 text-white fill-current" viewBox="0 0 24 24">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+      </svg>
+      {/* Pulsing indicator */}
+      <span className="absolute inset-0 rounded-full bg-[#25D366] opacity-30 animate-ping group-hover:animate-none pointer-events-none"></span>
+    </a>
+  )
+}
+
+function ContactSection() {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    website: '',
+    industry: '',
+    budget: '',
+    source: '',
+    message: ''
+  })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setFormData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault()
+    if (!formData.name || !formData.email || !formData.phone || !formData.website) {
+      setSubmitError('Please fill out all required fields marked with *')
+      return
+    }
+    setSubmitError(null)
+    setIsSubmitting(true)
+    try {
+      await submitLeadData(formData)
+
+      setSubmitSuccess(true)
+      setFormData({ name: '', email: '', phone: '', website: '', industry: '', budget: '', source: '', message: '' })
+    } catch (error) {
+      console.error('Lead submit failed:', error)
+      setSubmitError('Something went wrong. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <section id="contact" className="max-w-7xl mx-auto px-6 py-20">
+      <div className="bg-[#FAF9F5] text-slate-900 rounded-[40px] p-8 sm:p-12 md:p-16 shadow-[0_20px_60px_rgba(0,0,0,0.05)] grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative overflow-hidden border border-slate-200/50">
+        
+        {/* Left column */}
+        <div className="lg:col-span-5 space-y-6 text-left">
+          <span className="text-orange-600 font-mono text-xs uppercase tracking-[0.25em] font-bold block">CONTACT US</span>
+          <h2 className="text-4xl sm:text-5xl font-black text-slate-950 tracking-tight leading-none uppercase">
+            Ready to build a <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-violet-600">revenue machine?</span>
+          </h2>
+          <p className="text-slate-500 text-xs sm:text-sm font-light leading-relaxed max-w-md">
+            Tell us about your brand. In 30 minutes with a senior strategist, we'll map out a growth plan tailored specifically to your D2C stage.
+          </p>
+
+          <ul className="space-y-3.5 text-xs sm:text-sm text-slate-700 font-medium">
+            <li className="flex items-center gap-3">
+              <span className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-xs font-bold shrink-0">✓</span>
+              <span>Free 30-minute strategy call</span>
+            </li>
+            <li className="flex items-center gap-3">
+              <span className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-xs font-bold shrink-0">✓</span>
+              <span>No contracts - results-based engagement</span>
+            </li>
+            <li className="flex items-center gap-3">
+              <span className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-xs font-bold shrink-0">✓</span>
+              <span>D2C-only - we know your category</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Right column form */}
+        <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-10 shadow-[0_15px_40px_rgba(0,0,0,0.02)] border border-slate-100 text-left">
+          <h3 className="text-lg font-bold text-slate-950 mb-1">Send us a message</h3>
+          <p className="text-xs text-slate-400 mb-6 font-light">We respond within 24 hours.</p>
+
+          {/* Form is always visible */}
+          <form onSubmit={handleFormSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              {/* Full name */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1">FULL NAME *</label>
+                <input 
+                  type="text" 
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="Enter your name"
+                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs placeholder:text-slate-400 focus:border-orange-500 transition-colors"
+                />
+              </div>
+
+              {/* Email */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1">EMAIL *</label>
+                <input 
+                  type="email" 
+                  name="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="work@company.com"
+                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs placeholder:text-slate-400 focus:border-orange-500 transition-colors"
+                />
+              </div>
+
+              {/* Phone number */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1">PHONE NUMBER *</label>
+                <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 focus-within:border-orange-500 transition-colors">
+                  <span className="text-xs text-slate-500 mr-2 border-r border-slate-200 pr-2 select-none">🇮🇳 +91</span>
+                  <input 
+                    type="tel" 
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="98765 43210"
+                    className="w-full py-3.5 bg-transparent outline-none text-slate-900 text-xs placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              {/* Brand URL */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1">BRAND WEBSITE URL *</label>
+                <input 
+                  type="text" 
+                  name="website"
+                  value={formData.website}
+                  onChange={handleInputChange}
+                  required
+                  placeholder="www.yourbrand.com"
+                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs placeholder:text-slate-400 focus:border-orange-500 transition-colors"
+                />
+              </div>
+
+              {/* Industry */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1">INDUSTRY</label>
+                <select 
+                  name="industry"
+                  value={formData.industry}
+                  onChange={handleInputChange}
+                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs focus:border-orange-500 transition-colors"
+                >
+                  <option value="">Select Industry</option>
+                  <option value="apparel">Apparel & Fashion</option>
+                  <option value="jewelry">Jewelry</option>
+                  <option value="beauty">Beauty & Cosmetics</option>
+                  <option value="food">Food & Beverage</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              {/* Monthly budget */}
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1">MONTHLY AD BUDGET</label>
+                <select 
+                  name="budget"
+                  value={formData.budget}
+                  onChange={handleInputChange}
+                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs focus:border-orange-500 transition-colors"
+                >
+                  <option value="">Select Budget</option>
+                  <option value="under_1l">Under ₹1L</option>
+                  <option value="1l_5l">₹1L - ₹5L</option>
+                  <option value="5l_10l">₹5L - ₹10L</option>
+                  <option value="above_10l">Above ₹10L</option>
+                </select>
+              </div>
+
+            </div>
+
+            {/* Source */}
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 block mb-1">HOW DID YOU FIND US?</label>
+              <select 
+                name="source"
+                value={formData.source}
+                onChange={handleInputChange}
+                className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs focus:border-orange-500 transition-colors"
+              >
+                <option value="">Select Source</option>
+                <option value="google">Google</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="instagram">Instagram</option>
+                <option value="recommendation">Recommendation</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            {/* Message */}
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 block mb-1">MESSAGE</label>
+              <textarea 
+                name="message"
+                value={formData.message}
+                onChange={handleInputChange}
+                rows="3"
+                placeholder="Tell us about your brand goals..."
+                className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs placeholder:text-slate-400 focus:border-orange-500 transition-colors"
+              ></textarea>
+            </div>
+
+            {submitError && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs text-center font-medium">
+                {submitError}
+              </div>
+            )}
+
+            {/* Submit button */}
+            <button 
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-4 rounded-xl bg-orange-600 text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all duration-300 hover:bg-orange-500 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-[0_5px_20px_rgba(234,88,12,0.25)]"
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit'}
+              <span className="text-sm">→</span>
+            </button>
+
+            <div className="text-center">
+              <span className="text-[8px] text-slate-400 tracking-wider font-bold uppercase font-mono block mb-3">SENIOR STRATEGIST • NO OBLIGATION</span>
+            </div>
+
+            {/* Social Icons Row */}
+            <div className="flex items-center justify-center gap-4 pt-4 border-t border-slate-100">
+              <a 
+                href="https://www.linkedin.com/company/d2cgrow/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-500/30 text-slate-500 hover:text-[#EA580C] flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer"
+                aria-label="LinkedIn"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                </svg>
+              </a>
+              <a 
+                href="https://www.instagram.com/d2cgrow/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-500/30 text-slate-500 hover:text-[#EA580C] flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer"
+                aria-label="Instagram"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                </svg>
+              </a>
+              <a 
+                href="https://d2cgrow.com" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-500/30 text-slate-500 hover:text-[#EA580C] flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer"
+                aria-label="Portfolio"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                </svg>
+              </a>
+            </div>
+          </form>
+
+          {/* Success Overlay Popup */}
+          <AnimatePresence>
+            {submitSuccess && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+              >
+                <motion.div 
+                  initial={{ scale: 0.9, y: 20 }}
+                  animate={{ scale: 1, y: 0 }}
+                  exit={{ scale: 0.9, y: 20 }}
+                  className="bg-white rounded-[28px] border border-slate-100 p-8 max-w-sm w-full text-center shadow-2xl space-y-4"
+                >
+                  <div className="w-14 h-14 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-2xl mx-auto font-bold select-none">
+                    ✓
+                  </div>
+                  <h4 className="text-xl font-extrabold text-slate-900">Audit Request Received!</h4>
+                  <p className="text-slate-500 text-xs sm:text-sm font-light leading-relaxed">Thanks! Our team will contact you shortly.</p>
+                  <button 
+                    onClick={() => setSubmitSuccess(false)}
+                    className="w-full mt-2 py-3 rounded-full bg-[#EA580C] text-white font-bold text-xs uppercase tracking-wider hover:bg-[#ff7233] transition-colors cursor-pointer"
+                  >
+                    Done
+                  </button>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+      </div>
+    </section>
+  )
+}
+
 function TiltHeroImage() {
   const x = useMotionValue(0)
   const y = useMotionValue(0)
@@ -534,7 +995,7 @@ function TiltHeroImage() {
 
   return (
     <div 
-      className="relative w-full max-w-[440px] h-[340px] md:h-[400px] flex items-center justify-center perspective-[1000px] cursor-pointer group"
+      className="relative w-full max-w-[280px] xs:max-w-[340px] sm:max-w-[440px] h-[230px] xs:h-[280px] sm:h-[340px] md:h-[400px] flex items-center justify-center perspective-[1000px] cursor-pointer group scale-85 xs:scale-95 sm:scale-100 transition-all origin-center"
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
@@ -548,7 +1009,7 @@ function TiltHeroImage() {
           transformStyle: "preserve-3d"
         }}
         transition={{ type: "spring", stiffness: 300, damping: 22 }}
-        className="w-full h-full relative origin-center flex flex-col justify-center space-y-4"
+        className="w-full h-full relative origin-center flex flex-col justify-center space-y-2 md:space-y-4"
       >
         {/* Card 1: Top Metrics Capsule */}
         <div 
@@ -769,21 +1230,370 @@ function FooterTakeoverCard({ setShowEmailForm }) {
   )
 }
 
+function PlaybookPopup({ onClose }) {
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    setSubmitted(true)
+    setTimeout(() => {
+      onClose()
+    }, 2000)
+  }
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[150] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 sm:p-6"
+    >
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 40 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 40 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+        className="max-w-[480px] w-full bg-slate-950/80 border border-white/10 rounded-[32px] p-6 sm:p-8 relative shadow-[0_20px_50px_rgba(234,88,12,0.15)] overflow-hidden"
+      >
+        {/* Glow effect */}
+        <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-[#EA580C]/20 rounded-full blur-[80px] pointer-events-none"></div>
+
+        {/* Close Button */}
+        <button 
+          onClick={onClose} 
+          className="absolute top-5 right-5 w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors z-20 cursor-pointer"
+        >
+          ✕
+        </button>
+
+        {submitted ? (
+          <div className="text-center py-8 space-y-4">
+            <div className="w-16 h-16 bg-[#EA580C]/10 border border-[#EA580C]/40 rounded-full flex items-center justify-center text-2xl text-[#EA580C] mx-auto animate-bounce font-bold">
+              ✓
+            </div>
+            <h3 className="text-xl font-bold text-white">Playbook Sent!</h3>
+            <p className="text-gray-400 text-sm">Check your inbox. Scaling frameworks are on their way.</p>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Free Resource Badge */}
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#EA580C]/35 bg-[#EA580C]/5 text-[9px] uppercase tracking-widest font-bold text-[#EA580C]">
+              ✨ Free Resource
+            </div>
+
+            {/* Title */}
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight tracking-tight mt-2">
+              Before you go grab our <span className="text-[#EA580C]">D2C Growth</span> <span className="text-[#A78BFA]">Playbook</span>
+            </h2>
+
+            {/* Subtext */}
+            <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">
+              The exact frameworks we use to scale Indian D2C brands from ₹10L to ₹1Cr/month. Includes ad structures, retention flows, and unit economics templates.
+            </p>
+
+            {/* Checklist */}
+            <ul className="space-y-2.5 text-xs sm:text-sm text-gray-300 font-light my-2">
+              <li className="flex items-start gap-2.5">
+                <span className="text-[#EA580C] shrink-0 text-base">🎯</span>
+                <span>Meta & Google full funnel structure</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="text-[#EA580C] shrink-0 text-base">📊</span>
+                <span>Unit economics & profit calculator</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="text-[#EA580C] shrink-0 text-base">⚡</span>
+                <span>Shopify CRO checklist</span>
+              </li>
+            </ul>
+
+            {/* Inputs */}
+            <div className="space-y-3">
+              <input 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="Work Email" 
+                className="w-full p-4 rounded-xl bg-slate-900/60 border border-white/10 outline-none text-white text-xs sm:text-sm placeholder:text-gray-500 focus:border-[#EA580C]/40 transition-colors"
+              />
+
+              <div className="flex items-center bg-slate-900/60 border border-white/10 rounded-xl px-4 py-1.5 focus-within:border-[#EA580C]/40 transition-colors">
+                <div className="flex items-center gap-1.5 text-xs sm:text-sm text-white border-r border-white/10 pr-3 mr-3 select-none">
+                  <span>🇮🇳</span>
+                  <span>+91</span>
+                </div>
+                <input 
+                  type="tel" 
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                  placeholder="Phone Number" 
+                  className="w-full bg-transparent outline-none text-white text-xs sm:text-sm placeholder:text-gray-500"
+                />
+              </div>
+            </div>
+
+            {/* Action button */}
+            <button 
+              type="submit" 
+              className="w-full py-4 rounded-xl bg-[#EA580C] hover:bg-[#ff7233] text-white font-bold text-xs sm:text-sm transition-all duration-300 shadow-[0_4px_20px_rgba(234,88,12,0.3)] cursor-pointer flex items-center justify-center gap-2 group"
+            >
+              <svg className="w-4 h-4 shrink-0 transition-transform group-hover:-translate-y-0.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+              </svg>
+              Send Me the Playbook
+              <span className="transform group-hover:translate-x-1 transition-transform">→</span>
+            </button>
+
+            {/* Footnote */}
+            <p className="text-[10px] text-gray-500 text-center font-light">
+              No spam. Unsubscribe anytime. Used by 150+ D2C founders.
+            </p>
+          </form>
+        )}
+      </motion.div>
+    </motion.div>
+  )
+}
+
+function CaseStudyPage({ project, onClose, setShowEmailForm }) {
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [project])
+
+  return (
+    <div className="bg-[#0B0C15] text-white min-h-screen font-sans selection:bg-[#EA580C] relative pb-20">
+      {/* Glow backgrounds */}
+      <div className="absolute top-0 left-[10%] w-[600px] h-[600px] bg-gradient-to-br from-[#EA580C]/10 to-transparent blur-[120px] rounded-full pointer-events-none -z-10"></div>
+      <div className="absolute bottom-[20%] right-[10%] w-[600px] h-[600px] bg-gradient-to-tr from-[#A78BFA]/5 to-transparent blur-[150px] rounded-full pointer-events-none -z-10"></div>
+
+      {/* Header Nav */}
+      <header className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between border-b border-white/5">
+        <Logo />
+        <button 
+          onClick={onClose}
+          className="px-5 py-2.5 rounded-full border border-white/20 hover:border-[#EA580C] hover:bg-[#EA580C]/5 text-xs sm:text-sm font-bold transition-all duration-300 flex items-center gap-2 cursor-pointer group"
+        >
+          <span className="transform group-hover:-translate-x-1 transition-transform">←</span>
+          BACK TO CASE STUDIES
+        </button>
+      </header>
+
+      {/* Hero Header */}
+      <main className="max-w-7xl mx-auto px-6 pt-12">
+        <div className="max-w-4xl mb-12">
+          {/* Badge */}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#EA580C]/35 bg-[#EA580C]/5 text-xs font-bold text-[#EA580C] mb-6">
+            ✨ {project.brand} Case Study
+          </div>
+          
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-[1.15] tracking-tight text-white mb-6 uppercase font-sans">
+            {project.title}
+          </h1>
+          <p className="text-gray-400 text-sm sm:text-lg font-light leading-relaxed max-w-3xl">
+            {project.result}
+          </p>
+        </div>
+
+        {/* Mobile View: Keep exactly as it is */}
+        <div className="lg:hidden">
+          <div className="grid grid-cols-1 gap-8 items-start mb-16">
+            {/* Left: Metrics Boxes stacked */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-[#EA580C] mb-2 font-mono">Performance Impact</h3>
+              {project.metrics.map((metric, index) => (
+                <div 
+                  key={index} 
+                  className="p-6 sm:p-8 rounded-3xl border border-[#EA580C]/15 bg-[#EA580C]/[0.03] backdrop-blur-xl relative overflow-hidden shadow-lg group hover:border-[#EA580C]/30 transition-all duration-300"
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-[#EA580C]/5 rounded-full blur-xl pointer-events-none group-hover:bg-[#EA580C]/10 transition-colors"></div>
+                  <h4 className="text-xl sm:text-3xl font-black text-white group-hover:text-[#EA580C] transition-colors duration-300 uppercase tracking-tight mb-1">
+                    {metric}
+                  </h4>
+                  <p className="text-[10px] sm:text-xs text-gray-500 font-mono tracking-widest uppercase font-semibold">Verified Proof</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Right: Stunning Live Interactive Dashboards! */}
+            <div className="space-y-6">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-[#EA580C] mb-2 font-mono">
+                {project.useScreenshots ? "Verified Store Performance Proof" : "Interactive Performance Data"}
+              </h3>
+              {project.useScreenshots ? (
+                <div className={`grid gap-6 ${project.screenshots.length > 1 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'}`}>
+                  {project.screenshots.map((scr, sIdx) => (
+                    <div key={sIdx} className="border border-white/10 bg-slate-900/40 rounded-3xl p-4 shadow-[0_15px_40px_rgba(0,0,0,0.3)] backdrop-blur-md">
+                      <span className="text-[9px] text-gray-400 font-bold uppercase tracking-wider block mb-2 font-mono">
+                        {project.screenshots.length > 1 
+                          ? `Shopify Analytics (${sIdx === 0 ? 'Before' : 'After'})` 
+                          : 'Shopify Store Performance Data'}
+                      </span>
+                      <img src={scr} alt="Shopify Performance" className="w-full rounded-2xl border border-white/5 object-contain max-h-[350px] mx-auto hover:scale-[1.02] transition-transform duration-300" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <ShopifyDashboardChart brand={project.brand} data={project.shopifyData} />
+                  <MetaAdsDashboardChart data={project.metaData} />
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Desktop View: Pointers side by side and screenshots below */}
+        <div className="hidden lg:block space-y-12 mb-20">
+          
+          {/* Performance Impact Pointers side-by-side */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[#EA580C] mb-4 font-mono">Performance Impact</h3>
+            <div className={`grid gap-6 ${
+              project.metrics.length === 5 ? 'grid-cols-5' : 
+              project.metrics.length === 4 ? 'grid-cols-4' : 
+              'grid-cols-3'
+            }`}>
+              {project.metrics.map((metric, index) => (
+                <div 
+                  key={index} 
+                  className="p-6 xl:p-8 rounded-[28px] border border-[#EA580C]/15 bg-[#EA580C]/[0.03] backdrop-blur-xl relative overflow-hidden shadow-lg group hover:border-[#EA580C]/30 transition-all duration-300"
+                >
+                  <div className="absolute top-0 right-0 w-24 h-24 bg-[#EA580C]/5 rounded-full blur-xl pointer-events-none group-hover:bg-[#EA580C]/10 transition-colors"></div>
+                  <h4 className="text-xl xl:text-2xl font-black text-white group-hover:text-[#EA580C] transition-colors duration-300 uppercase tracking-tight mb-1">
+                    {metric}
+                  </h4>
+                  <p className="text-[10px] text-gray-500 font-mono tracking-widest uppercase font-semibold">Verified Proof</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Shopify Before/After Screenshots below them with increased size */}
+          <div className="space-y-6">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[#EA580C] mb-2 font-mono">
+              {project.useScreenshots ? "Verified Store Performance Proof" : "Interactive Performance Data"}
+            </h3>
+            {project.useScreenshots ? (
+              <div className={`grid gap-8 ${project.screenshots.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {project.screenshots.map((scr, sIdx) => (
+                  <div key={sIdx} className="border border-white/10 bg-slate-900/40 rounded-[32px] p-6 shadow-[0_25px_60px_rgba(0,0,0,0.5)] backdrop-blur-md">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block mb-3 font-mono">
+                      {project.screenshots.length > 1 
+                        ? `Shopify Analytics (${sIdx === 0 ? 'Before' : 'After'})` 
+                        : 'Shopify Store Performance Data'}
+                    </span>
+                    <img src={scr} alt="Shopify Performance" className="w-full rounded-2xl border border-white/5 object-contain max-h-[550px] mx-auto hover:scale-[1.01] transition-transform duration-300" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-8">
+                <ShopifyDashboardChart brand={project.brand} data={project.shopifyData} />
+                <MetaAdsDashboardChart data={project.metaData} />
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* Breakdown section */}
+        <div className="border-t border-white/5 pt-12 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-16">
+          <div className="lg:col-span-4">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-[#EA580C] mb-2 font-mono">Core Strategy</h3>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-4">How We Scaled This Brand</h2>
+            <div className="flex flex-wrap gap-2 mt-4">
+              {project.services.map((srv, idx) => (
+                <span key={idx} className="px-3 py-1 rounded-full border border-white/10 bg-white/[0.02] text-gray-300 text-xs font-light font-sans tracking-wide">
+                  {srv}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="lg:col-span-8">
+            <p className="text-gray-400 text-sm sm:text-base leading-8 font-light max-w-3xl mb-6">
+              {project.insights}
+            </p>
+            <p className="text-gray-400 text-sm sm:text-base leading-8 font-light max-w-3xl">
+              By combining high-converting performance copy with systematic advantage targeting frameworks, we scaled their overall purchase frequency while keeping acquisition costs predictable and healthy.
+            </p>
+          </div>
+        </div>
+
+        {/* Bottom CTA Takeover Card */}
+        <div className="relative rounded-[40px] border border-[#EA580C]/20 bg-[#0B0C15] overflow-hidden p-8 sm:p-12 md:p-16 shadow-[0_20px_50px_rgba(234,88,12,0.15)] flex flex-col items-center text-center">
+          {/* Subtle glowing graphics */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#EA580C/[0.08]_0%,transparent_60%)] pointer-events-none"></div>
+          <div className="absolute top-0 right-[20%] w-60 h-60 bg-[#A78BFA]/5 rounded-full blur-[80px] pointer-events-none"></div>
+
+          <span className="text-[#EA580C] font-mono text-xs uppercase tracking-[0.3em] font-bold mb-4">READY TO SCALE YOUR D2C BRAND?</span>
+          <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-none mb-6 max-w-2xl uppercase">
+            Let us build your custom profit roadmap
+          </h2>
+          <p className="text-gray-400 text-xs sm:text-base font-light leading-relaxed max-w-lg mb-8">
+            We will audit your Meta Ads account, landing page checkout funnels, and retention systems free of charge. No catch. Just raw performance insights.
+          </p>
+          
+          <button 
+            onClick={() => setShowEmailForm(true)}
+            className="px-8 py-4 sm:px-10 sm:py-5 rounded-full bg-[#EA580C] hover:bg-[#ff7233] text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all duration-300 shadow-[0_5px_25px_rgba(234,88,12,0.4)] flex items-center gap-3 cursor-pointer group"
+          >
+            Book A Free Audit
+            <span className="transform group-hover:translate-x-1.5 transition-transform duration-300">→</span>
+          </button>
+        </div>
+
+      </main>
+    </div>
+  )
+}
+
 export default function PortfolioWebsite() {
 
   const [selectedProject, setSelectedProject] = useState(null)
+  const [windowWidth, setWindowWidth] = useState(1200)
+  const [showPlaybook, setShowPlaybook] = useState(false)
+
+  useEffect(() => {
+    setWindowWidth(window.innerWidth)
+    const handleResize = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', handleResize)
+    
+    // Playbook popup triggered exactly 2 seconds after mount (unless already dismissed)
+    const dismissed = sessionStorage.getItem('playbook_dismissed')
+    let timer
+    if (!dismissed) {
+      timer = setTimeout(() => {
+        setShowPlaybook(true)
+      }, 2000)
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      if (timer) clearTimeout(timer)
+    }
+  }, [])
+
   const [showEmailForm, setShowEmailForm] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [activeCategory, setActiveCategory] = useState('jewelry')
+  const [activeCategory, setActiveCategory] = useState('clothing')
 
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    brand: '',
-    goals: ''
+    phone: '',
+    website: '',
+    industry: '',
+    budget: '',
+    source: '',
+    message: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitSuccess, setSubmitSuccess] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -792,40 +1602,24 @@ export default function PortfolioWebsite() {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.name || !formData.email || !formData.brand) {
-      alert('Please fill out all required fields.')
+    if (!formData.name || !formData.email || !formData.phone || !formData.website) {
+      setSubmitError('Please fill out all required fields marked with *')
       return
     }
+    setSubmitError(null)
     setIsSubmitting(true)
     try {
-      const scriptURL = ''
-      
-      const payload = new URLSearchParams()
-      payload.append('name', formData.name)
-      payload.append('email', formData.email)
-      payload.append('brand', formData.brand)
-      payload.append('goals', formData.goals)
-
-      if (scriptURL) {
-        await fetch(scriptURL, {
-          method: 'POST',
-          body: payload,
-          mode: 'no-cors'
-        })
-      } else {
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        console.log('Submitted successfully to Sheets (Simulated):', formData)
-      }
+      await submitLeadData(formData)
       
       setSubmitSuccess(true)
-      setFormData({ name: '', email: '', brand: '', goals: '' })
+      setFormData({ name: '', email: '', phone: '', website: '', industry: '', budget: '', source: '', message: '' })
       setTimeout(() => {
         setSubmitSuccess(false)
         setShowEmailForm(false)
-      }, 3000)
+      }, 4000)
     } catch (error) {
-      console.error('Submit failed:', error)
-      alert('Submission failed. Please try again.')
+      console.error('Modal submit failed:', error)
+      setSubmitError('Something went wrong. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -853,11 +1647,15 @@ export default function PortfolioWebsite() {
 
     window.addEventListener('mousemove', onMouseMove)
 
-    const interactiveElements = document.querySelectorAll('a, button, [role="button"], .cursor-pointer')
-    interactiveElements.forEach(el => {
-      el.addEventListener('mouseenter', addHoverActive)
-      el.addEventListener('mouseleave', removeHoverActive)
-    })
+    const handleMouseOver = (e) => {
+      const target = e.target.closest('a, button, [role="button"], .cursor-pointer')
+      if (target) {
+        addHoverActive()
+      } else {
+        removeHoverActive()
+      }
+    }
+    window.addEventListener('mouseover', handleMouseOver)
 
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
     
@@ -888,17 +1686,9 @@ export default function PortfolioWebsite() {
 
     return () => {
       window.removeEventListener('mousemove', onMouseMove)
-      interactiveElements.forEach(el => {
-        el.removeEventListener('mouseenter', addHoverActive)
-        el.removeEventListener('mouseleave', removeHoverActive)
-      })
-      magneticElements.forEach(btn => {
-        if (!btn) return
-        btn.removeEventListener('mousemove', () => {})
-        btn.removeEventListener('mouseleave', () => {})
-      })
+      window.removeEventListener('mouseover', handleMouseOver)
     }
-  }, [selectedProject, showEmailForm, mobileMenuOpen, activeCategory])
+  }, [])
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -928,8 +1718,16 @@ export default function PortfolioWebsite() {
       <div className="hidden lg:block custom-cursor"></div>
       <div className="hidden lg:block custom-cursor-dot"></div>
 
-      {/* Decorative Radial Backgrounds & Diamond Grid Pattern */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+      {selectedProject ? (
+        <CaseStudyPage 
+          project={selectedProject} 
+          onClose={() => setSelectedProject(null)} 
+          setShowEmailForm={setShowEmailForm}
+        />
+      ) : (
+        <>
+          {/* Decorative Radial Backgrounds & Diamond Grid Pattern */}
+          <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-[#0B0C15] bg-[radial-gradient(circle_at_top,#151627_0%,#0B0C15_50%,#05060A_100%)]"></div>
         <div className="absolute inset-0 diamond-grid"></div>
         <div className="absolute top-[5%] left-[-15%] w-[800px] h-[800px] bg-gradient-to-tr from-[#EA580C]/[0.08] to-[#EA580C]/[0.01] blur-[150px] rounded-full"></div>
@@ -937,26 +1735,40 @@ export default function PortfolioWebsite() {
       </div>
 
       {/* Navbar */}
-      <nav ref={navRef} className="sticky top-0 z-50 backdrop-blur-2xl border-b border-white/5 bg-[#0B0C15]/85">
+      <nav ref={navRef} className="fixed top-0 left-0 right-0 z-50 backdrop-blur-2xl border-b border-white/5 bg-[#0B0C15]/85">
         <div className="max-w-6xl mx-auto px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Logo className="cursor-pointer hover:opacity-90 transition-opacity duration-300" />
-            <button 
-              onClick={() => setShowEmailForm(true)}
-              className="px-4 py-1.5 rounded-full border border-[#EA580C]/30 bg-[#EA580C]/[0.08] text-[11px] font-semibold text-[#EA580C] tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer glow-btn"
+            <a 
+              href="#contact"
+              onClick={(e) => {
+                e.preventDefault()
+                document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+              }}
+              className="px-4 py-1.5 rounded-full border border-orange-500/30 bg-orange-500/5 text-[11px] font-semibold text-orange-500 tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer glow-btn"
             >
               Book a Call
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
-            </button>
+            </a>
           </div>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex gap-10 text-sm text-[#EA580C]/80 font-light">
+          <div className="hidden md:flex gap-10 text-sm text-[#EA580C]/80 font-light items-center">
             <a href="#services" className="hover:text-white transition-all duration-300 hover:scale-105">Services</a>
             <a href="#projects" className="hover:text-white transition-all duration-300 hover:scale-105">Proofs</a>
-            <a href="#promises" className="hover:text-white transition-all duration-300 hover:scale-105">Why Us</a>
+            <a href="#promises" className="hover:text-white transition-all duration-300 hover:scale-105">Steps to Boost Revenue</a>
+            <a 
+              href="#contact" 
+              onClick={(e) => {
+                e.preventDefault()
+                document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+              }}
+              className="hover:text-white transition-all duration-300 hover:scale-105"
+            >
+              Contact Us
+            </a>
           </div>
 
           {/* Hamburger Menu Button */}
@@ -1014,95 +1826,106 @@ export default function PortfolioWebsite() {
                 }}
                 className="text-base text-gray-300 hover:text-[#EA580C] transition-colors duration-300 font-light tracking-wider"
               >
-                Why Us
+                Steps to Boost Revenue
               </a>
-              <button 
-                onClick={() => {
+              <a 
+                href="#contact" 
+                onClick={(e) => {
+                  e.preventDefault()
                   setMobileMenuOpen(false)
-                  setShowEmailForm(true)
+                  document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="text-base text-gray-300 hover:text-[#EA580C] transition-colors duration-300 font-light tracking-wider"
+              >
+                Contact Us
+              </a>
+              <a 
+                href="#contact"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setMobileMenuOpen(false)
+                  document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
                 }}
                 className="w-full mt-2 py-3 rounded-full bg-[#EA580C] text-white font-bold text-sm tracking-wider text-center cursor-pointer glow-btn flex items-center justify-center gap-2"
               >
-                Book Now
+                Book a Call
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
-              </button>
+              </a>
             </motion.div>
           )}
         </AnimatePresence>
       </nav>
 
       {/* Hero Section */}
-      <section className="max-w-6xl mx-auto px-6 pt-10 pb-4">
-        <div className="flex flex-col md:grid md:grid-cols-12 md:gap-8 items-center mb-6">
-          
-          {/* 1. TEXT CONTAINER */}
-          <div className="w-full md:col-span-7 flex flex-col order-1">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#EA580C]/50 bg-[#EA580C]/[0.05] backdrop-blur-xl mb-4 text-[9px] md:text-[11px] uppercase tracking-[0.25em] text-[#EA580C] w-fit font-sans font-bold">
-              <span className="w-2 h-2 bg-[#EA580C] rounded-full animate-pulse mr-0.5"></span>
-              Profit Driven Growth
-            </div>
-
-            <h1 ref={headingRef} className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-[-0.04em] mb-5 select-all text-white font-sans">
-              Scaling Brands <span className="block mt-2">with <span className="bg-[#EA580C] text-white px-4 py-1.5 md:px-6 md:py-2 rounded-xl md:rounded-3xl shadow-[0_4px_25px_rgba(234,88,12,0.3)] font-extrabold inline-inline-flex items-center justify-center text-lg sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl align-middle font-sans"><TextLoop /></span></span>
-            </h1>
-
-            <p ref={bioRef} className="text-slate-300 text-xs sm:text-sm md:text-base tracking-wide font-normal mb-8 leading-relaxed font-sans max-w-xl">
-              We help D2C brands scale profitably on Meta & Google — with data, not guesswork.
-            </p>
-          </div>
-
-          {/* 2. GRAPH CONTAINER */}
-          <div className="w-full md:col-span-5 flex justify-center order-2 my-8 md:my-0">
-            <TiltHeroImage />
-          </div>
+      <section className="max-w-4xl mx-auto px-6 pt-32 pb-12 text-center flex flex-col items-center select-all">
+        
+        {/* Badge */}
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border border-[#EA580C]/30 bg-[#EA580C]/5 backdrop-blur-xl mb-6 text-[10px] sm:text-xs uppercase tracking-[0.25em] text-[#EA580C] font-bold font-sans">
+          <span className="w-1.5 h-1.5 bg-[#EA580C] rounded-full animate-pulse mr-0.5"></span>
+          PROFIT DRIVEN GROWTH
         </div>
 
-        {/* 3. CTA & TRUSTED BY */}
-        <div ref={ctaContainerRef} className="flex flex-col gap-6 max-w-2xl mb-8 order-3">
-          <div className="flex flex-wrap gap-2.5">
-            <a 
-              ref={magneticBtn1}
-              href="#projects" 
-              onClick={(e) => {
-                e.preventDefault()
-                document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })
-              }} 
-              className="px-6 py-3.5 md:px-8 md:py-4 rounded-full bg-[#EA580C] text-white font-bold text-xs md:text-sm transition-all duration-300 shadow-[0_4px_20px_rgba(234,88,12,0.35)] inline-flex items-center justify-center min-w-[120px] md:min-w-[140px] glow-btn cursor-pointer font-sans"
-            >
-              View Proof
-            </a>
+        {/* Title */}
+        <h1 ref={headingRef} className="text-4xl sm:text-6xl md:text-7xl font-extrabold leading-[1.1] tracking-tight mb-6 text-white font-sans uppercase">
+          Scaling Brands <br />
+          with <span className="bg-[#EA580C] text-white px-4 py-1.5 sm:px-6 sm:py-2 rounded-2xl sm:rounded-3xl shadow-[0_4px_25px_rgba(234,88,12,0.3)] font-black inline-flex items-center justify-center text-xl sm:text-3xl md:text-4xl align-middle font-sans mt-2"><TextLoop /></span>
+        </h1>
 
-            <a 
-              ref={magneticBtn2}
-              href="#promises" 
-              onClick={(e) => {
-                e.preventDefault()
-                document.getElementById('promises')?.scrollIntoView({ behavior: 'smooth' })
-              }} 
-              className="px-6 py-3.5 md:px-8 md:py-4 rounded-full border border-white/80 bg-transparent text-white text-xs md:text-sm font-bold transition-all duration-300 hover:border-[#EA580C] hover:bg-[#EA580C]/5 inline-flex items-center justify-center min-w-[130px] md:min-w-[160px] glow-btn cursor-pointer font-sans"
-            >
-              Start Scaling
-            </a>
-          </div>
-          
-          <div className="text-[10px] md:text-xs text-gray-500 font-mono tracking-widest uppercase flex items-center gap-2 mt-1">
-            <span>Trusted by:</span>
-            <span className="text-[#EA580C] font-semibold">D2C</span>
-            <span className="text-gray-700">•</span>
-            <span className="text-[#EA580C] font-semibold">B2B</span>
-            <span className="text-gray-700">•</span>
-            <span className="text-[#EA580C] font-semibold">Real Estate</span>
-          </div>
+        {/* Description */}
+        <p ref={bioRef} className="text-slate-300 text-sm sm:text-lg md:text-xl tracking-wide font-normal mb-10 leading-relaxed font-sans max-w-2xl">
+          we help D2C & B2B brands scale profitably on Meta & Google – with data, not guesswork.
+        </p>
+
+        {/* restored size graph image with top and bottom spacing */}
+        <div className="w-full max-w-2xl my-12 flex justify-center py-4">
+          <TiltHeroImage />
+        </div>
+
+        {/* CTA Buttons */}
+        <div ref={ctaContainerRef} className="flex flex-row gap-4 mt-8 justify-center w-full max-w-md">
+          <a 
+            ref={magneticBtn2}
+            href="#projects" 
+            onClick={(e) => {
+              e.preventDefault()
+              document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })
+            }} 
+            className="px-8 py-4 sm:px-10 sm:py-4.5 rounded-full bg-[#EA580C] text-white font-extrabold text-xs sm:text-sm tracking-wide transition-all duration-300 shadow-[0_5px_25px_rgba(234,88,12,0.4)] hover:bg-[#ff7233] flex-1 text-center cursor-pointer font-sans uppercase"
+          >
+            View Proof
+          </a>
+
+          <a 
+            ref={magneticBtn1}
+            href="#contact"
+            onClick={(e) => {
+              e.preventDefault()
+              document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+            }}
+            className="px-8 py-4 sm:px-10 sm:py-4.5 rounded-full border border-white/20 bg-transparent text-white font-extrabold text-xs sm:text-sm tracking-wide transition-all duration-300 hover:border-[#EA580C] hover:text-[#EA580C] flex-1 text-center cursor-pointer font-sans uppercase"
+          >
+            Start Scaling
+          </a>
+        </div>
+
+        {/* Trusted Tagline */}
+        <div className="text-[10px] md:text-xs text-gray-500 font-mono tracking-widest uppercase flex items-center gap-2 mt-8">
+          <span>Trusted by:</span>
+          <span className="text-[#EA580C] font-semibold">D2C</span>
+          <span className="text-gray-700">•</span>
+          <span className="text-[#EA580C] font-semibold">B2B</span>
+          <span className="text-gray-700">•</span>
+          <span className="text-[#EA580C] font-semibold">Real Estate</span>
         </div>
 
         {/* 4. STATS ROW */}
-        <div ref={statsContainerRef} className="grid grid-cols-4 gap-2 pt-6 border-t border-white/5 order-4">
+        <div ref={statsContainerRef} className="grid grid-cols-4 gap-4 pt-12 mt-12 border-t border-white/5 w-full">
           {stats.map((item, index) => (
             <div 
               key={index} 
-              className="stat-card p-2 md:p-5 rounded-[22px] border border-[#EA580C]/10 bg-[#EA580C]/[0.02] backdrop-blur-2xl hover:border-[#EA580C]/30 hover:bg-[#EA580C]/[0.06] transition-all duration-500 hover:-translate-y-1 shadow-md text-center group"
+              className="stat-card p-4 md:p-6 rounded-[22px] border border-white/5 bg-white/[0.01] backdrop-blur-2xl hover:border-[#EA580C]/30 hover:bg-[#EA580C]/[0.02] transition-all duration-500 hover:-translate-y-1 shadow-md text-center group"
             >
               <h2 className="text-base sm:text-2xl md:text-4xl lg:text-5xl font-black mb-1 text-white tracking-tight group-hover:text-[#EA580C] transition-colors duration-300">
                 <CountUp end={item.value} suffix={item.suffix} />
@@ -1156,10 +1979,10 @@ export default function PortfolioWebsite() {
 
           {/* Right Column */}
           <div className="lg:col-span-7 flex justify-center items-center py-2 lg:py-6">
-            <div className="relative w-[320px] h-[320px] md:w-[440px] md:h-[440px] flex items-center justify-center">
+            <div className="relative w-[340px] h-[340px] xs:w-[380px] xs:h-[380px] md:w-[440px] md:h-[440px] flex items-center justify-center">
               
               {/* Central core node */}
-              <div className="absolute w-24 h-24 md:w-32 md:h-32 rounded-full bg-[#EA580C]/[0.05] border border-[#EA580C]/30 flex flex-col items-center justify-center z-20 shadow-[0_0_30px_rgba(234,88,12,0.2)] animate-pulse">
+              <div className="absolute w-24 h-24 xs:w-28 xs:h-28 md:w-32 md:h-32 rounded-full bg-[#EA580C]/[0.05] border border-[#EA580C]/30 flex flex-col items-center justify-center z-20 shadow-[0_0_30px_rgba(234,88,12,0.2)] animate-pulse">
                 <span className="text-[9px] text-[#EA580C]/75 font-mono tracking-widest uppercase mb-1">CORE</span>
                 <span className="text-xs md:text-base font-bold text-[#EA580C] tracking-wider uppercase font-sans">GROWTH</span>
               </div>
@@ -1174,21 +1997,22 @@ export default function PortfolioWebsite() {
 
                 {services.map((srv, idx) => {
                   const angle = (idx * 360) / services.length
+                  const translateVal = windowWidth < 400 ? '112px' : windowWidth < 768 ? '132px' : '155px'
                   return (
                     <div
                       key={idx}
                       className="absolute"
                       style={{
-                        transform: `rotate(${angle}deg) translate(${window.innerWidth < 768 ? '108px' : '155px'}) rotate(-${angle}deg)`
+                        transform: `rotate(${angle}deg) translate(${translateVal}) rotate(-${angle}deg)`
                       }}
                     >
                       <motion.div
                         animate={{ rotate: -360 }}
                         transition={{ repeat: Infinity, duration: 26, ease: "linear" }}
-                        className="w-[74px] h-[74px] md:w-20 md:h-20 rounded-full border border-[#EA580C]/25 bg-[#0B0C15] hover:bg-[#EA580C] hover:text-white flex flex-col items-center justify-center text-center shadow-lg transition-colors duration-300 cursor-pointer group"
+                        className="w-[72px] h-[72px] xs:w-[84px] xs:h-[84px] md:w-20 md:h-20 rounded-full border border-[#EA580C]/25 bg-[#0B0C15] hover:bg-[#EA580C] hover:text-white flex flex-col items-center justify-center text-center shadow-lg transition-colors duration-300 cursor-pointer group"
                       >
                         <span className="text-lg md:text-lg mb-0.5">{srv.icon}</span>
-                        <span className="text-[8.5px] md:text-[9.5px] font-bold tracking-tight uppercase leading-tight font-sans text-gray-300 group-hover:text-white line-clamp-2 px-1">
+                        <span className="text-[8px] xs:text-[9.5px] font-bold tracking-tight uppercase leading-tight font-sans text-gray-300 group-hover:text-white line-clamp-2 px-1">
                           {srv.title}
                         </span>
                       </motion.div>
@@ -1200,34 +2024,45 @@ export default function PortfolioWebsite() {
           </div>
         </div>
 
-        {/* Bottom Area */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-16">
+        {/* Bottom Area: arrange in 4/4 grid in desktop and 1/1 in mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-16 w-full">
           {services.map((service, index) => (
             <div 
-              key={index} 
-              className="group p-8 rounded-[30px] border border-[#EA580C]/10 bg-[#EA580C]/[0.02] hover:border-[#EA580C]/30 hover:bg-[#EA580C]/[0.06] backdrop-blur-2xl transition-all duration-500 hover:-translate-y-2 shadow-md relative overflow-hidden"
+              key={index}
+              className="rounded-[24px] border border-white/5 bg-white/[0.01] hover:border-[#EA580C]/40 hover:bg-[#EA580C]/[0.03] transition-all duration-300 p-6 flex flex-col justify-between shadow-lg group text-left"
             >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#EA580C]/[0.01] rounded-full blur-2xl group-hover:bg-[#EA580C]/[0.05] transition-all duration-500"></div>
-              <div className="w-12 h-12 rounded-full border border-[#EA580C]/15 bg-[#EA580C]/[0.08] flex items-center justify-center mb-6 group-hover:scale-110 group-hover:border-[#EA580C]/40 transition-all duration-300">
-                <span className="text-xl">{service.icon}</span>
+              <div>
+                <div className="w-12 h-12 rounded-2xl bg-[#EA580C]/10 border border-[#EA580C]/20 flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform duration-300">
+                  {service.icon}
+                </div>
+                <span className="text-[9px] text-[#EA580C] font-mono tracking-widest uppercase block mb-1">SERVICE 0{index + 1}</span>
+                <h3 className="text-lg font-bold text-white tracking-tight mb-2 group-hover:text-[#EA580C] transition-colors duration-300">
+                  {service.title}
+                </h3>
+                <p className="text-gray-400 text-xs font-light leading-relaxed">
+                  {service.desc}
+                </p>
               </div>
-              <h3 className="text-2xl font-medium tracking-[-0.03em] mb-4 group-hover:text-[#EA580C] transition-colors duration-300">{service.title}</h3>
-              <p className="text-gray-400 leading-8 font-light text-sm">{service.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* Case Studies Section */}
-      <section id="projects" className="max-w-7xl mx-auto px-6 py-10">
-        <div className="text-center mb-8">
-          <p className="text-[#EA580C] uppercase tracking-[0.35em] text-xs mb-2 font-bold font-sans">Results</p>
-          <h2 className="text-3xl md:text-4xl font-bold tracking-[-0.04em] mb-2 uppercase font-sans">Proofs, Not Promises</h2>
+      <section id="projects" className="max-w-7xl mx-auto px-6 py-20 text-center">
+        <div className="mb-12">
+          <span className="text-[#EA580C] uppercase tracking-[0.35em] text-xs mb-2 font-bold font-sans">THE PROOF</span>
+          <h2 className="text-4xl md:text-6xl font-black tracking-tight mt-4 text-white leading-none uppercase font-sans">
+            Real results. <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-violet-500">Real brands.</span>
+          </h2>
+          <p className="text-gray-400 text-xs sm:text-sm font-light max-w-2xl mx-auto leading-relaxed mt-4">
+            We drive revenue growth for brands across every stage. As a result-first direct to consumer marketing agency, every case study reflects our expertise as a leading d2c marketing agency.
+          </p>
         </div>
 
         {/* Category Filters */}
-        <div className="flex flex-wrap justify-center gap-2 mb-10">
-          {['jewelry', 'clothing', 'real_estate', 'other'].map((cat) => (
+        <div className="flex flex-wrap justify-center gap-2 mb-12">
+          {['clothing', 'jewelry', 'others'].map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
@@ -1237,7 +2072,7 @@ export default function PortfolioWebsite() {
                   : 'border-white/10 hover:border-[#EA580C]/40 text-gray-400 hover:text-white'
               }`}
             >
-              {cat.replace('_', ' ')}
+              {cat}
             </button>
           ))}
         </div>
@@ -1248,98 +2083,18 @@ export default function PortfolioWebsite() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-80px" }}
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+          className="flex flex-col gap-8 mt-12 w-full"
         >
           {caseStudiesData[activeCategory].map((study, index) => (
-            <motion.div 
-              key={index} 
-              variants={itemVariants}
-              onClick={() => setSelectedProject(study)} 
-              className="overflow-hidden rounded-[30px] border border-[#EA580C]/10 bg-[#EA580C]/[0.02] hover:border-[#EA580C]/30 hover:bg-[#EA580C]/[0.06] backdrop-blur-2xl transition-all duration-500 hover:-translate-y-2 cursor-pointer shadow-lg group"
-            >
-              <div className="overflow-hidden relative h-56">
-                <img 
-                  src={study.image} 
-                  alt={study.brand} 
-                  className="h-full w-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700 ease-out" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C15] to-transparent opacity-60"></div>
-              </div>
-              <div className="p-7">
-                <h3 className="text-xl font-bold mb-3 group-hover:text-[#EA580C] transition-colors duration-300">{study.brand}</h3>
-                <p className="text-gray-400 leading-6 font-light text-xs mb-5 line-clamp-2">{study.result}</p>
-                <div className="text-[#EA580C] text-xs uppercase tracking-[0.2em] font-bold flex items-center gap-2 group-hover:text-white transition-all duration-300 font-sans">
-                  View Case Study
-                  <span className="transform group-hover:translate-x-1.5 transition-transform duration-300">→</span>
-                </div>
-              </div>
-            </motion.div>
+            <CaseStudyCard 
+              key={index}
+              study={study}
+              index={index}
+              onClick={() => setSelectedProject(study)}
+            />
           ))}
         </motion.div>
       </section>
-
-      {/* Case Study Detail Modal */}
-      <AnimatePresence>
-        {selectedProject && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-xl p-4 md:p-6"
-          >
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 30 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 30 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="max-w-4xl w-full bg-[#0B0C15] border border-[#EA580C]/15 rounded-[32px] overflow-hidden max-h-[90vh] overflow-y-auto shadow-2xl relative"
-            >
-              <button 
-                onClick={() => setSelectedProject(null)} 
-                className="absolute top-6 right-6 w-11 h-11 rounded-full bg-[#EA580C]/10 hover:bg-[#EA580C] hover:text-white transition-all duration-300 z-10 flex items-center justify-center text-lg font-light text-[#EA580C]"
-              >
-                ✕
-              </button>
-              <div className="relative h-[200px] md:h-[300px]">
-                <img src={selectedProject.image} alt={selectedProject.brand} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0B0C15] via-transparent to-transparent"></div>
-              </div>
-              
-              <div className="p-6 md:p-10">
-                <div className="mb-6">
-                  <p className="text-[#EA580C] uppercase tracking-[0.3em] text-xs font-bold mb-2">Case Study</p>
-                  <h2 className="text-3xl md:text-4xl font-semibold tracking-[-0.04em] mb-4">{selectedProject.brand}</h2>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProject.services.map((srv, index) => (
-                      <span key={index} className="px-3 py-1 rounded-full border border-white/10 bg-white/[0.03] text-gray-300 text-xs font-light">
-                        {srv}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Dynamic Dashboards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  <ShopifyDashboardChart brand={selectedProject.brand} data={selectedProject.shopifyData} />
-                  <MetaAdsDashboardChart data={selectedProject.metaData} />
-                </div>
-
-                {/* Strategy metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  {selectedProject.metrics.map((metric, index) => (
-                    <div key={index} className="p-4 rounded-xl border border-[#EA580C]/10 bg-[#EA580C]/[0.03] text-center shadow-inner">
-                      <h3 className="text-lg font-semibold text-[#EA580C]">{metric}</h3>
-                    </div>
-                  ))}
-                </div>
-                <h4 className="text-lg font-medium text-white mb-2">Core Strategy & Execution</h4>
-                <p className="text-gray-400 leading-7 font-light text-sm">{selectedProject.insights}</p>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Reviews & Double Brands Marquee */}
       <section className="max-w-7xl mx-auto py-10 overflow-hidden">
@@ -1353,7 +2108,14 @@ export default function PortfolioWebsite() {
             {duplicatedReviews.map((review, index) => (
               <div key={index} className="w-[350px] md:w-[400px] shrink-0 rounded-[28px] border border-[#EA580C]/10 bg-[#EA580C]/[0.02] hover:border-[#EA580C]/30 backdrop-blur-2xl p-6 md:p-8 transition-colors duration-300 shadow-md">
                 <h3 className="text-lg font-medium text-white mb-1">{review.name}</h3>
-                <p className="text-[#EA580C] text-xs uppercase tracking-[0.15em] mb-4 font-bold font-sans">{review.brand}</p>
+                <p className="text-[#EA580C] text-xs uppercase tracking-[0.15em] mb-2 font-bold font-sans">{review.brand}</p>
+                <div className="flex items-center gap-1 mb-4 text-[#EA580C]">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <svg key={i} className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                      <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.787 1.4 8.168L12 18.896l-7.334 3.857 1.4-8.168L.132 9.21l8.2-1.192z" />
+                    </svg>
+                  ))}
+                </div>
                 <p className="text-gray-400 leading-6 font-light text-xs italic">“{review.review}”</p>
               </div>
             ))}
@@ -1386,28 +2148,214 @@ export default function PortfolioWebsite() {
         </div>
       </section>
 
-      {/* Premium Sticky Overlapping Stacking Cards */}
-      <section id="promises" className="relative w-full">
-        <StickyCard
-          num="01"
-          title={<span>Unlock Full <br className="hidden md:inline" />Funnel Growth</span>}
-          desc="We align every marketing touchpoint, from top-of-funnel discovery to post-purchase retention. We optimize campaigns, landing pages, and email flow integrations under a unified scaling system."
-          index={0}
-        />
-        <StickyCard
-          num="02"
-          title={<span>Conversions <br className="hidden md:inline" />with 4X ROAS</span>}
-          desc="By combining high-intent keyword targets on Google Ads with aggressive lookalike scaling on Meta Ads, we guarantee scalable acquisition performance that matches your margin targets."
-          index={1}
-        />
-        <StickyCard
-          num="03"
-          title={<span>Creative Strategy <br className="hidden md:inline" />that Scales</span>}
-          desc="UGC, hooks, and performance-driven ad templates optimized for high click-through rates (CTR) and visual retention, beating advertising fatigue before it impacts your bottom line."
-          index={2}
-        />
-        <FooterTakeoverCard setShowEmailForm={setShowEmailForm} />
+      {/* Steps to Boost Revenue */}
+      <section id="promises" className="w-full bg-[#FAF9F5] py-24 border-t border-slate-200">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <span className="text-[#EA580C] uppercase tracking-[0.35em] text-xs font-bold block mb-2 font-sans">STEPS TO BOOST REVENUE</span>
+            <h2 className="text-3xl sm:text-5xl font-black text-slate-950 tracking-tight uppercase font-sans">
+              5-Step Success Path <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-violet-600">to Predictable Revenue</span>
+            </h2>
+            <p className="text-slate-500 text-xs sm:text-sm font-light max-w-lg mx-auto mt-4 leading-relaxed font-sans">
+              We audit, structure, and scale your D2C brand through a proven growth framework engineered for profit.
+            </p>
+          </div>
+
+          <div className="relative border-l border-slate-200 ml-4 sm:ml-8 pl-8 sm:pl-12 space-y-16 py-4 text-left">
+            
+            {/* Step 1 */}
+            <div className="relative group">
+              {/* Step indicator dot with icon */}
+              <div className="absolute -left-[53px] sm:-left-[73px] top-0 w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-white border-2 border-[#EA580C] flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300 select-none">
+                <span className="text-lg sm:text-xl">🔬</span>
+              </div>
+              
+              <div className="bg-white rounded-[32px] p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_50px_rgba(234,88,12,0.06)] hover:-translate-y-1 transition-all duration-300">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span className="bg-orange-50 text-[#EA580C] text-[9px] font-extrabold uppercase px-2.5 py-1 rounded-full font-mono">STEP 1</span>
+                  <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider font-sans">DAY 0</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-3 font-sans">Free Strategy Consultation</h3>
+                <p className="text-slate-600 text-xs sm:text-sm font-light leading-relaxed mb-6 font-sans">
+                  Deep-dive strategy call to audit your brand, growth stage, and channels. We find exactly where revenue is leaking before execution begins.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-xs sm:text-sm text-slate-700 font-medium font-sans">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Funnel review & Ad account audit</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Competitor analysis</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Revenue leakage analysis</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Growth opportunity mapping</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="relative group">
+              {/* Step indicator dot with icon */}
+              <div className="absolute -left-[53px] sm:-left-[73px] top-0 w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-white border-2 border-[#EA580C] flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300 select-none">
+                <span className="text-lg sm:text-xl">💻</span>
+              </div>
+              
+              <div className="bg-white rounded-[32px] p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_50px_rgba(234,88,12,0.06)] hover:-translate-y-1 transition-all duration-300">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span className="bg-orange-50 text-[#EA580C] text-[9px] font-extrabold uppercase px-2.5 py-1 rounded-full font-mono">STEP 2</span>
+                  <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider font-sans">DAY 1–7</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-3 font-sans">Shopify Store & Data Foundation</h3>
+                <p className="text-slate-600 text-xs sm:text-sm font-light leading-relaxed mb-6 font-sans">
+                  Infrastructure fix. We solve conversion drops caused by slow speeds and broken tracking with accurate Shopify attribution systems.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-xs sm:text-sm text-slate-700 font-medium font-sans">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Shopify CRO & Speed improvements</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Meta CAPI & Google Ads API setup</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>GA4 & Server-side tracking</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>First-party cookie tracking</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="relative group">
+              {/* Step indicator dot with icon */}
+              <div className="absolute -left-[53px] sm:-left-[73px] top-0 w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-white border-2 border-[#EA580C] flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300 select-none">
+                <span className="text-lg sm:text-xl">🗺️</span>
+              </div>
+              
+              <div className="bg-white rounded-[32px] p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_50px_rgba(234,88,12,0.06)] hover:-translate-y-1 transition-all duration-300">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span className="bg-orange-50 text-[#EA580C] text-[9px] font-extrabold uppercase px-2.5 py-1 rounded-full font-mono">STEP 3</span>
+                  <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider font-sans">DAY 4–7</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-3 font-sans">Growth Roadmap</h3>
+                <p className="text-slate-600 text-xs sm:text-sm font-light leading-relaxed mb-6 font-sans">
+                  Data-driven playbook tailored to your margins. We map budget allocation, channel priorities, and creative testing for the next 90 days.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-xs sm:text-sm text-slate-700 font-medium font-sans">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Budget allocation planning</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Creative strategy planning</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>90-day revenue roadmap</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>KPI and reporting structure</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 4 */}
+            <div className="relative group">
+              {/* Step indicator dot with icon */}
+              <div className="absolute -left-[53px] sm:-left-[73px] top-0 w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-white border-2 border-[#EA580C] flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300 select-none">
+                <span className="text-lg sm:text-xl">🚀</span>
+              </div>
+              
+              <div className="bg-white rounded-[32px] p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_50px_rgba(234,88,12,0.06)] hover:-translate-y-1 transition-all duration-300">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span className="bg-orange-50 text-[#EA580C] text-[9px] font-extrabold uppercase px-2.5 py-1 rounded-full font-mono">STEP 4</span>
+                  <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider font-sans">DAY 8–14</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-3 font-sans">Multi-Channel Campaign Launch</h3>
+                <p className="text-slate-600 text-xs sm:text-sm font-light leading-relaxed mb-6 font-sans">
+                  Omni-channel execution across Meta, Google, and CRM. Every campaign is built for performance and high-intent conversion.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-xs sm:text-sm text-slate-700 font-medium font-sans">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Meta & Google ad campaigns</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>WhatsApp & Email automation</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Creative production & GTM</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Landing page optimisation</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 5 */}
+            <div className="relative group">
+              {/* Step indicator dot with icon */}
+              <div className="absolute -left-[53px] sm:-left-[73px] top-0 w-10 h-10 sm:w-14 sm:h-14 rounded-2xl bg-white border-2 border-[#EA580C] flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300 select-none">
+                <span className="text-lg sm:text-xl">📈</span>
+              </div>
+              
+              <div className="bg-white rounded-[32px] p-6 sm:p-8 border border-slate-100 shadow-[0_10px_30px_rgba(0,0,0,0.02)] hover:shadow-[0_20px_50px_rgba(234,88,12,0.06)] hover:-translate-y-1 transition-all duration-300">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span className="bg-orange-50 text-[#EA580C] text-[9px] font-extrabold uppercase px-2.5 py-1 rounded-full font-mono">STEP 5</span>
+                  <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider font-sans">ONGOING / WEEKLY</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mb-3 font-sans">Scale, Compound & Retain</h3>
+                <p className="text-slate-600 text-xs sm:text-sm font-light leading-relaxed mb-6 font-sans">
+                  Continuous testing and retention scaling. We double down on winning creatives to ensure revenue compounds predictably.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-xs sm:text-sm text-slate-700 font-medium font-sans">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Weekly P&L reporting</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Creative testing cycles</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Audience & budget scaling</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#EA580C] font-bold">▪</span>
+                    <span>Retention flow optimisation</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <ContactSection />
       </section>
+      </>
+      )}
 
       {/* Email Form Modal */}
       <AnimatePresence>
@@ -1440,49 +2388,156 @@ export default function PortfolioWebsite() {
                     ✓
                   </div>
                   <h3 className="text-2xl font-bold text-white">Audit Request Received!</h3>
-                  <p className="text-gray-400 text-sm max-w-sm">We are analyzing your brand metrics. Expect an audit callback within 24 hours.</p>
+                  <p className="text-gray-400 text-sm max-w-sm">Thanks! Our team will contact you shortly.</p>
+                  <button 
+                    onClick={() => {
+                      setSubmitSuccess(false)
+                      setShowEmailForm(false)
+                    }} 
+                    className="mt-4 px-6 py-2.5 rounded-full bg-[#EA580C] hover:bg-[#ff7233] text-white text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer"
+                  >
+                    Done
+                  </button>
                 </div>
               ) : (
                 <form className="space-y-4" onSubmit={handleFormSubmit}>
-                  <input 
-                    type="text" 
-                    name="name" 
-                    value={formData.name} 
-                    onChange={handleInputChange} 
-                    required 
-                    placeholder="Your Name" 
-                    className="w-full p-5 rounded-2xl bg-[#EA580C]/[0.02] border border-[#EA580C]/10 outline-none text-white placeholder:text-gray-600 focus:border-[#EA580C]/40 transition-all duration-300" 
-                  />
-                  <input 
-                    type="email" 
-                    name="email" 
-                    value={formData.email} 
-                    onChange={handleInputChange} 
-                    required 
-                    placeholder="Your Email" 
-                    className="w-full p-5 rounded-2xl bg-[#EA580C]/[0.02] border border-[#EA580C]/10 outline-none text-white placeholder:text-gray-600 focus:border-[#EA580C]/40 transition-all duration-300" 
-                  />
-                  <input 
-                    type="text" 
-                    name="brand" 
-                    value={formData.brand} 
-                    onChange={handleInputChange} 
-                    required 
-                    placeholder="Brand Name" 
-                    className="w-full p-5 rounded-2xl bg-[#EA580C]/[0.02] border border-[#EA580C]/10 outline-none text-white placeholder:text-gray-600 focus:border-[#EA580C]/40 transition-all duration-300" 
-                  />
-                  <textarea 
-                    name="goals" 
-                    value={formData.goals} 
-                    onChange={handleInputChange} 
-                    rows="4" 
-                    placeholder="Tell me about your brand goals" 
-                    className="w-full p-5 rounded-2xl bg-[#EA580C]/[0.02] border border-[#EA580C]/10 outline-none text-white placeholder:text-gray-600 focus:border-[#EA580C]/40 transition-all duration-300"
-                  ></textarea>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                    {/* Full Name */}
+                    <div>
+                      <label className="text-[9px] font-bold text-gray-500 block mb-1">FULL NAME *</label>
+                      <input 
+                        type="text" 
+                        name="name" 
+                        value={formData.name} 
+                        onChange={handleInputChange} 
+                        required 
+                        placeholder="Your Name" 
+                        className="w-full p-3.5 rounded-xl bg-white/[0.02] border border-white/10 outline-none text-white text-xs placeholder:text-gray-600 focus:border-[#EA580C]/45 transition-colors" 
+                      />
+                    </div>
+                    
+                    {/* Email */}
+                    <div>
+                      <label className="text-[9px] font-bold text-gray-500 block mb-1">EMAIL *</label>
+                      <input 
+                        type="email" 
+                        name="email" 
+                        value={formData.email} 
+                        onChange={handleInputChange} 
+                        required 
+                        placeholder="work@company.com" 
+                        className="w-full p-3.5 rounded-xl bg-white/[0.02] border border-white/10 outline-none text-white text-xs placeholder:text-gray-600 focus:border-[#EA580C]/45 transition-colors" 
+                      />
+                    </div>
+
+                    {/* Phone Number */}
+                    <div>
+                      <label className="text-[9px] font-bold text-gray-500 block mb-1">PHONE NUMBER *</label>
+                      <div className="flex items-center bg-white/[0.02] border border-white/10 rounded-xl px-3 focus-within:border-[#EA580C]/45 transition-colors">
+                        <span className="text-xs text-gray-500 mr-2 border-r border-white/10 pr-2 select-none">🇮🇳 +91</span>
+                        <input 
+                          type="tel" 
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="98765 43210"
+                          className="w-full py-3.5 bg-transparent outline-none text-white text-xs placeholder:text-gray-600"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Website */}
+                    <div>
+                      <label className="text-[9px] font-bold text-gray-500 block mb-1">BRAND WEBSITE URL *</label>
+                      <input 
+                        type="text" 
+                        name="website" 
+                        value={formData.website} 
+                        onChange={handleInputChange} 
+                        required 
+                        placeholder="www.yourbrand.com" 
+                        className="w-full p-3.5 rounded-xl bg-white/[0.02] border border-white/10 outline-none text-white text-xs placeholder:text-gray-600 focus:border-[#EA580C]/45 transition-colors" 
+                      />
+                    </div>
+
+                    {/* Industry */}
+                    <div>
+                      <label className="text-[9px] font-bold text-gray-500 block mb-1">INDUSTRY</label>
+                      <select 
+                        name="industry"
+                        value={formData.industry}
+                        onChange={handleInputChange}
+                        className="w-full p-3.5 rounded-xl bg-[#0B0C15] border border-white/10 outline-none text-white text-xs focus:border-[#EA580C]/45 transition-colors"
+                      >
+                        <option value="">Select Industry</option>
+                        <option value="apparel">Apparel & Fashion</option>
+                        <option value="jewelry">Jewelry</option>
+                        <option value="beauty">Beauty & Cosmetics</option>
+                        <option value="food">Food & Beverage</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+
+                    {/* Budget */}
+                    <div>
+                      <label className="text-[9px] font-bold text-gray-500 block mb-1">MONTHLY AD BUDGET</label>
+                      <select 
+                        name="budget"
+                        value={formData.budget}
+                        onChange={handleInputChange}
+                        className="w-full p-3.5 rounded-xl bg-[#0B0C15] border border-white/10 outline-none text-white text-xs focus:border-[#EA580C]/45 transition-colors"
+                      >
+                        <option value="">Select Budget</option>
+                        <option value="under_1l">Under ₹1L</option>
+                        <option value="1l_5l">₹1L - ₹5L</option>
+                        <option value="5l_10l">₹5L - ₹10L</option>
+                        <option value="above_10l">Above ₹10L</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Source */}
+                  <div className="text-left">
+                    <label className="text-[9px] font-bold text-gray-500 block mb-1 font-sans">HOW DID YOU FIND US?</label>
+                    <select 
+                      name="source"
+                      value={formData.source}
+                      onChange={handleInputChange}
+                      className="w-full p-3.5 rounded-xl bg-[#0B0C15] border border-white/10 outline-none text-white text-xs focus:border-[#EA580C]/45 transition-colors"
+                    >
+                      <option value="">Select Source</option>
+                      <option value="google">Google</option>
+                      <option value="linkedin">LinkedIn</option>
+                      <option value="instagram">Instagram</option>
+                      <option value="recommendation">Recommendation</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  {/* Message */}
+                  <div className="text-left">
+                    <label className="text-[9px] font-bold text-gray-500 block mb-1">MESSAGE</label>
+                    <textarea 
+                      name="message" 
+                      value={formData.message} 
+                      onChange={handleInputChange} 
+                      rows="3" 
+                      placeholder="Tell us about your brand goals..." 
+                      className="w-full p-3.5 rounded-xl bg-white/[0.02] border border-white/10 outline-none text-white text-xs placeholder:text-gray-600 focus:border-[#EA580C]/45 transition-colors"
+                    ></textarea>
+                  </div>
+
+                  {submitError && (
+                    <div className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-900/50 text-rose-400 text-xs text-center font-medium">
+                      {submitError}
+                    </div>
+                  )}
+
                   <button 
                     type="submit" 
                     disabled={isSubmitting}
-                    className="w-full py-5 rounded-full bg-[#EA580C] text-white font-bold hover:bg-[#ff7233] transition-all duration-300 shadow-[0_4px_20px_rgba(234,88,12,0.3)] disabled:opacity-50 cursor-pointer text-center uppercase tracking-wider"
+                    className="w-full py-4 rounded-xl bg-[#EA580C] text-white font-extrabold hover:bg-[#ff7233] transition-all duration-300 shadow-[0_4px_20px_rgba(234,88,12,0.3)] disabled:opacity-50 cursor-pointer text-center uppercase tracking-wider text-xs sm:text-sm"
                   >
                     {isSubmitting ? 'Submitting Request...' : 'Submit Audit Request'}
                   </button>
@@ -1493,9 +2548,132 @@ export default function PortfolioWebsite() {
         )}
       </AnimatePresence>
 
-      <footer className="border-t border-white/5 py-8 text-center text-gray-500 text-xs tracking-wider">
-        <Logo className="justify-center mb-4 opacity-50 hover:opacity-80 transition-opacity duration-300" />
-        <p>© 2026 D2cGrow. Built for your brand growth.</p>
+      {/* Playbook Auto Popup */}
+      <AnimatePresence>
+        {showPlaybook && (
+          <PlaybookPopup onClose={() => {
+            sessionStorage.setItem('playbook_dismissed', 'true')
+            setShowPlaybook(false)
+          }} />
+        )}
+      </AnimatePresence>
+
+      <StickyWhatsAppButton />
+
+      <footer className="bg-[#05060A] border-t border-white/5 pt-20 pb-12 text-left text-gray-400 font-sans selection:bg-[#EA580C] w-full">
+        <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 mb-16">
+          
+          {/* Col 1: Logo & Agency Details */}
+          <div className="lg:col-span-3 flex flex-col space-y-6">
+            <Logo />
+            <div className="space-y-4 text-xs font-light tracking-wide leading-relaxed">
+              <p className="text-white/80 font-bold tracking-widest text-[10px] uppercase font-mono">D2C ECOMMERCE MARKETING AGENCY</p>
+              <p className="text-gray-500">
+                D905, Titanium Business Park, Makarba,<br />
+                Ahmedabad, Gujarat 380051
+              </p>
+              <a href="mailto:sales@d2cgrow.com" className="text-gray-400 hover:text-[#EA580C] transition-colors block font-mono">
+                sales@d2cgrow.com
+              </a>
+            </div>
+            
+            {/* Social Icons matching Peak Pilots footer */}
+            <div className="flex items-center gap-3 pt-2">
+              <a 
+                href="https://linkedin.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.02] hover:border-[#EA580C] hover:bg-[#EA580C]/5 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.779-1.75-1.75s.784-1.75 1.75-1.75 1.75.779 1.75 1.75-.784 1.75-1.75 1.75zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                </svg>
+              </a>
+              <a 
+                href="https://twitter.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.02] hover:border-[#EA580C] hover:bg-[#EA580C]/5 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+                </svg>
+              </a>
+              <a 
+                href="https://instagram.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.02] hover:border-[#EA580C] hover:bg-[#EA580C]/5 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+
+          {/* Col 2: Services */}
+          <div className="lg:col-span-3 space-y-4">
+            <h3 className="text-white font-bold tracking-widest text-xs uppercase font-mono">SERVICES</h3>
+            <ul className="space-y-2 text-xs font-light">
+              <li><a href="#services" className="hover:text-white transition-colors duration-300">Free Consultation</a></li>
+              <li><a href="#services" className="hover:text-white transition-colors duration-300">Meta Ads</a></li>
+              <li><a href="#services" className="hover:text-white transition-colors duration-300">Google Ads</a></li>
+              <li><a href="#services" className="hover:text-white transition-colors duration-300">Creative Strategy</a></li>
+              <li><a href="#services" className="hover:text-white transition-colors duration-300">CRO</a></li>
+              <li><a href="#services" className="hover:text-white transition-colors duration-300">Retention Marketing</a></li>
+            </ul>
+          </div>
+
+          {/* Col 3: Company */}
+          <div className="lg:col-span-3 space-y-4">
+            <h3 className="text-white font-bold tracking-widest text-xs uppercase font-mono">COMPANY</h3>
+            <ul className="space-y-2 text-xs font-light">
+              <li><a href="#about" className="hover:text-white transition-colors duration-300">About</a></li>
+              <li><a href="#projects" className="hover:text-white transition-colors duration-300">Results</a></li>
+              <li><a href="#contact" onClick={(e) => { e.preventDefault(); document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }) }} className="hover:text-white transition-colors duration-300">Contact</a></li>
+            </ul>
+          </div>
+
+          {/* Col 4: Resources */}
+          <div className="lg:col-span-3 space-y-4">
+            <h3 className="text-white font-bold tracking-widest text-xs uppercase font-mono">RESOURCES</h3>
+            <ul className="space-y-2 text-xs font-light">
+              <li>
+                <button 
+                  onClick={() => setShowEmailForm(true)} 
+                  className="hover:text-white transition-colors duration-300 bg-transparent border-none p-0 cursor-pointer outline-none text-left"
+                >
+                  Free Audit
+                </button>
+              </li>
+              <li>
+                <a 
+                  href="#contact" 
+                  onClick={(e) => {
+                    e.preventDefault()
+                    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="hover:text-white transition-colors duration-300"
+                >
+                  Book a Call
+                </a>
+              </li>
+              <li><a href="#terms" className="hover:text-white transition-colors duration-300">Terms of Service</a></li>
+              <li><a href="#privacy" className="hover:text-white transition-colors duration-300">Privacy Policy</a></li>
+            </ul>
+          </div>
+
+        </div>
+
+        {/* Bottom copyright line */}
+        <div className="max-w-6xl mx-auto px-6 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-600 font-light">
+          <p>© 2026 D2cGrow. Built for your brand growth.</p>
+          <div className="flex gap-6 mt-4 sm:mt-0 font-mono">
+            <a href="#privacy" className="hover:text-white transition-colors duration-300">Privacy Policy</a>
+            <a href="#terms" className="hover:text-white transition-colors duration-300">Terms of Service</a>
+          </div>
+        </div>
       </footer>
     </div>
   )
