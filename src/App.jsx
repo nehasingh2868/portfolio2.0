@@ -5,6 +5,7 @@ import { gsap } from 'gsap'
 export const SUBMISSION_CONFIG = {
   // Option 1: Direct Webhook (Zapier, Make.com, Pabbly, etc.)
   webhookUrl: 'https://hooks.zapier.com/hooks/catch/27724194/4o0yp1h/', 
+  webhookPlaybookUrl: '', // Add a separate webhook for playbook leads if needed
 
   // Option 2: Supabase Database Configuration
   supabaseUrl: '',
@@ -12,12 +13,19 @@ export const SUBMISSION_CONFIG = {
   supabaseTable: 'leads',
 
   // Option 3: Google Sheets Apps Script URL (Active Fallback)
-  googleSheetsUrl: 'https://script.google.com/macros/s/AKfycbyv5rQZcQ8WlWv5x9f4m2S8R8gX_P9s7N15hL-B2m6Zg3s8Z8/exec'
+  googleSheetsUrl: 'https://script.google.com/macros/s/AKfycbwaWu2fQr2p8WqgVbXrU0GoVp35qYDLgjn0CviiW5rpft77jYJNUt3gM9AO_3IENkD0Sg/exec',
+  googleSheetsPlaybookUrl: 'https://script.google.com/macros/s/AKfycbwaWu2fQr2p8WqgVbXrU0GoVp35qYDLgjn0CviiW5rpft77jYJNUt3gM9AO_3IENkD0Sg/exec' // Paste your separate Playbook Google Sheet Apps Script URL here!
 }
 
 export async function submitLeadData(formData) {
+  const isPlaybook = formData.source === 'playbook_popup' || formData.source === 'playbook';
+
   // 1. Webhook Option (Zapier / Make / custom)
-  if (SUBMISSION_CONFIG.webhookUrl) {
+  const activeWebhookUrl = isPlaybook && SUBMISSION_CONFIG.webhookPlaybookUrl 
+    ? SUBMISSION_CONFIG.webhookPlaybookUrl 
+    : SUBMISSION_CONFIG.webhookUrl;
+
+  if (activeWebhookUrl) {
     const searchParams = new URLSearchParams()
     searchParams.append('timestamp', new Date().toISOString())
     searchParams.append('name', formData.name || '')
@@ -29,7 +37,7 @@ export async function submitLeadData(formData) {
     searchParams.append('source', formData.source || '')
     searchParams.append('message', formData.message || '')
 
-    const response = await fetch(SUBMISSION_CONFIG.webhookUrl, {
+    const response = await fetch(activeWebhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -65,10 +73,14 @@ export async function submitLeadData(formData) {
   }
 
   // 3. Fallback: Google Sheets Apps Script URL
-  if (SUBMISSION_CONFIG.googleSheetsUrl) {
+  const activeGoogleSheetsUrl = isPlaybook && SUBMISSION_CONFIG.googleSheetsPlaybookUrl
+    ? SUBMISSION_CONFIG.googleSheetsPlaybookUrl
+    : SUBMISSION_CONFIG.googleSheetsUrl;
+
+  if (activeGoogleSheetsUrl) {
     const payload = new URLSearchParams()
     Object.entries(formData).forEach(([key, val]) => payload.append(key, val))
-    await fetch(SUBMISSION_CONFIG.googleSheetsUrl, {
+    await fetch(activeGoogleSheetsUrl, {
       method: 'POST',
       body: payload,
       mode: 'no-cors'
@@ -167,7 +179,7 @@ const caseStudiesData = {
       title: 'Zero to Scale in 18 Days',
       result: 'Took a brand new store with zero sales history and scaled it from 2 daily orders to 98 daily orders in just 18 days, reaching ₹1,39,900 in daily gross revenue with broad Advantage+ campaign structures.',
       insights: 'Built Meta campaigns from scratch utilizing broad targeting with Advantage+ from day one. Created a rapid-test creative framework launching 8 creatives in the first week to find winners fast, scaling winning creatives aggressively once cost-per-purchase (CPP) data stabilized after Day 5 while maintaining consistent daily sales flow without relying on single-spike events.',
-      image: '/kalkivastra-banner.png',
+      image: '/kalki.jpg',
       metrics: ['66x Revenue Growth', '6,981 Daily Sessions', '98 Daily Orders', '18 Days to Scale'],
       services: ['Meta Ads Scaling', 'Advantage+ Campaigns', 'Creative Testing Framework'],
       useScreenshots: true,
@@ -342,7 +354,7 @@ function TextLoop() {
   }, [])
 
   return (
-    <span className="relative inline-block overflow-hidden h-[1.45em] w-[180px] xs:w-[210px] sm:w-[270px] md:w-[380px] lg:w-[480px] align-middle select-none">
+    <span className="relative inline-block overflow-hidden h-[1.45em] w-[210px] sm:w-[295px] md:w-[365px] lg:w-[435px] align-middle select-none">
       <AnimatePresence mode="wait">
         <motion.span
           key={index}
@@ -706,21 +718,21 @@ function ContactSection() {
   }
 
   return (
-    <section id="contact" className="max-w-7xl mx-auto px-6 py-20">
-      <div className="bg-[#FAF9F5] text-slate-900 rounded-[40px] p-8 sm:p-12 md:p-16 shadow-[0_20px_60px_rgba(0,0,0,0.05)] grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative overflow-hidden border border-slate-200/50">
+    <section id="contact" className="max-w-7xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+      <div className="bg-[#FAF9F5] text-slate-900 rounded-[40px] p-4 xs:p-6 sm:p-12 md:p-16 shadow-[0_20px_60px_rgba(0,0,0,0.05)] grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative overflow-hidden border border-slate-200/50">
         
         {/* Left column */}
         <div className="lg:col-span-5 space-y-6 text-left">
           <span className="text-orange-600 font-mono text-xs uppercase tracking-[0.25em] font-bold block">CONTACT US</span>
-          <h2 className="text-4xl sm:text-5xl font-black text-slate-950 tracking-tight leading-none uppercase">
+          <h2 className="text-4xl sm:text-5xl font-black text-slate-950 tracking-tight leading-none uppercase font-sans">
             Ready to build a <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-violet-600">revenue machine?</span>
           </h2>
-          <p className="text-slate-500 text-xs sm:text-sm font-light leading-relaxed max-w-md">
+          <p className="text-slate-500 text-xs sm:text-sm font-light leading-relaxed max-w-md font-sans">
             Tell us about your brand. In 30 minutes with a senior strategist, we'll map out a growth plan tailored specifically to your D2C stage.
           </p>
 
-          <ul className="space-y-3.5 text-xs sm:text-sm text-slate-700 font-medium">
+          <ul className="space-y-3.5 text-xs sm:text-sm text-slate-700 font-medium font-sans">
             <li className="flex items-center gap-3">
               <span className="w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-xs font-bold shrink-0">✓</span>
               <span>Free 30-minute strategy call</span>
@@ -737,9 +749,9 @@ function ContactSection() {
         </div>
 
         {/* Right column form */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-6 sm:p-10 shadow-[0_15px_40px_rgba(0,0,0,0.02)] border border-slate-100 text-left">
-          <h3 className="text-lg font-bold text-slate-950 mb-1">Send us a message</h3>
-          <p className="text-xs text-slate-400 mb-6 font-light">We respond within 24 hours.</p>
+        <div className="lg:col-span-7 bg-white rounded-3xl p-4 xs:p-6 sm:p-10 shadow-[0_15px_40px_rgba(0,0,0,0.02)] border border-slate-100 text-left">
+          <h3 className="text-lg font-bold text-slate-950 mb-1 font-sans">Send us a message</h3>
+          <p className="text-xs text-slate-400 mb-6 font-light font-sans">We respond within 24 hours.</p>
 
           {/* Form is always visible */}
           <form onSubmit={handleFormSubmit} className="space-y-4">
@@ -747,7 +759,7 @@ function ContactSection() {
               
               {/* Full name */}
               <div>
-                <label className="text-[10px] font-bold text-slate-400 block mb-1">FULL NAME *</label>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1 font-mono">FULL NAME *</label>
                 <input 
                   type="text" 
                   name="name"
@@ -755,13 +767,13 @@ function ContactSection() {
                   onChange={handleInputChange}
                   required
                   placeholder="Enter your name"
-                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs placeholder:text-slate-400 focus:border-orange-500 transition-colors"
+                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs placeholder:text-slate-400 focus:border-orange-500 transition-colors font-sans"
                 />
               </div>
 
               {/* Email */}
               <div>
-                <label className="text-[10px] font-bold text-slate-400 block mb-1">EMAIL *</label>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1 font-mono">EMAIL *</label>
                 <input 
                   type="email" 
                   name="email"
@@ -769,14 +781,14 @@ function ContactSection() {
                   onChange={handleInputChange}
                   required
                   placeholder="work@company.com"
-                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs placeholder:text-slate-400 focus:border-orange-500 transition-colors"
+                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs placeholder:text-slate-400 focus:border-orange-500 transition-colors font-sans"
                 />
               </div>
 
               {/* Phone number */}
               <div>
-                <label className="text-[10px] font-bold text-slate-400 block mb-1">PHONE NUMBER *</label>
-                <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 focus-within:border-orange-500 transition-colors">
+                <label className="text-[10px] font-bold text-slate-400 block mb-1 font-mono">PHONE NUMBER *</label>
+                <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 focus-within:border-orange-500 transition-colors font-mono">
                   <span className="text-xs text-slate-500 mr-2 border-r border-slate-200 pr-2 select-none">🇮🇳 +91</span>
                   <input 
                     type="tel" 
@@ -784,7 +796,7 @@ function ContactSection() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     required
-                    placeholder="98765 43210"
+                    placeholder="93522 34643"
                     className="w-full py-3.5 bg-transparent outline-none text-slate-900 text-xs placeholder:text-slate-400"
                   />
                 </div>
@@ -792,7 +804,7 @@ function ContactSection() {
 
               {/* Brand URL */}
               <div>
-                <label className="text-[10px] font-bold text-slate-400 block mb-1">BRAND WEBSITE URL *</label>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1 font-mono">BRAND WEBSITE URL *</label>
                 <input 
                   type="text" 
                   name="website"
@@ -800,18 +812,18 @@ function ContactSection() {
                   onChange={handleInputChange}
                   required
                   placeholder="www.yourbrand.com"
-                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs placeholder:text-slate-400 focus:border-orange-500 transition-colors"
+                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs placeholder:text-slate-400 focus:border-orange-500 transition-colors font-sans"
                 />
               </div>
 
               {/* Industry */}
               <div>
-                <label className="text-[10px] font-bold text-slate-400 block mb-1">INDUSTRY</label>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1 font-mono">INDUSTRY</label>
                 <select 
                   name="industry"
                   value={formData.industry}
                   onChange={handleInputChange}
-                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs focus:border-orange-500 transition-colors"
+                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs focus:border-orange-500 transition-colors font-sans"
                 >
                   <option value="">Select Industry</option>
                   <option value="apparel">Apparel & Fashion</option>
@@ -824,12 +836,12 @@ function ContactSection() {
 
               {/* Monthly budget */}
               <div>
-                <label className="text-[10px] font-bold text-slate-400 block mb-1">MONTHLY AD BUDGET</label>
+                <label className="text-[10px] font-bold text-slate-400 block mb-1 font-mono">MONTHLY AD BUDGET</label>
                 <select 
                   name="budget"
                   value={formData.budget}
                   onChange={handleInputChange}
-                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs focus:border-orange-500 transition-colors"
+                  className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs focus:border-orange-500 transition-colors font-sans"
                 >
                   <option value="">Select Budget</option>
                   <option value="under_1l">Under ₹1L</option>
@@ -843,12 +855,12 @@ function ContactSection() {
 
             {/* Source */}
             <div>
-              <label className="text-[10px] font-bold text-slate-400 block mb-1">HOW DID YOU FIND US?</label>
+              <label className="text-[10px] font-bold text-slate-400 block mb-1 font-mono">HOW DID YOU FIND US?</label>
               <select 
                 name="source"
                 value={formData.source}
                 onChange={handleInputChange}
-                className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs focus:border-orange-500 transition-colors"
+                className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs focus:border-orange-500 transition-colors font-sans"
               >
                 <option value="">Select Source</option>
                 <option value="google">Google</option>
@@ -861,19 +873,19 @@ function ContactSection() {
 
             {/* Message */}
             <div>
-              <label className="text-[10px] font-bold text-slate-400 block mb-1">MESSAGE</label>
+              <label className="text-[10px] font-bold text-slate-400 block mb-1 font-mono">MESSAGE</label>
               <textarea 
                 name="message"
                 value={formData.message}
                 onChange={handleInputChange}
                 rows="3"
                 placeholder="Tell us about your brand goals..."
-                className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs placeholder:text-slate-400 focus:border-orange-500 transition-colors"
+                className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 outline-none text-slate-900 text-xs placeholder:text-slate-400 focus:border-orange-500 transition-colors font-sans"
               ></textarea>
             </div>
 
             {submitError && (
-              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs text-center font-medium">
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs text-center font-medium font-sans">
                 {submitError}
               </div>
             )}
@@ -882,7 +894,7 @@ function ContactSection() {
             <button 
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-4 rounded-xl bg-orange-600 text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all duration-300 hover:bg-orange-500 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-[0_5px_20px_rgba(234,88,12,0.25)]"
+              className="w-full py-4 rounded-xl bg-orange-600 text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all duration-300 hover:bg-orange-500 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-[0_5px_20px_rgba(234,88,12,0.25)] font-sans"
             >
               {isSubmitting ? 'Submitting...' : 'Submit'}
               <span className="text-sm">→</span>
@@ -917,14 +929,21 @@ function ContactSection() {
                 </svg>
               </a>
               <a 
-                href="https://d2cgrow.com" 
-                target="_blank" 
-                rel="noopener noreferrer"
+                href="tel:+919352234643"
                 className="w-9 h-9 rounded-full bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-500/30 text-slate-500 hover:text-[#EA580C] flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer"
-                aria-label="Portfolio"
+                aria-label="Call Us"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.387a12.035 12.035 0 01-7.108-7.108c-.155-.44.011-.927.387-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.11-1.008H5.03c-1.137 0-2.054.924-2.054 2.054V6.75z" />
+                </svg>
+              </a>
+              <a 
+                href="mailto:d2cgrow@gmail.com"
+                className="w-9 h-9 rounded-full bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-500/30 text-slate-500 hover:text-[#EA580C] flex items-center justify-center transition-all duration-300 shadow-sm cursor-pointer"
+                aria-label="Email Us"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                 </svg>
               </a>
             </div>
@@ -948,11 +967,11 @@ function ContactSection() {
                   <div className="w-14 h-14 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-2xl mx-auto font-bold select-none">
                     ✓
                   </div>
-                  <h4 className="text-xl font-extrabold text-slate-900">Audit Request Received!</h4>
-                  <p className="text-slate-500 text-xs sm:text-sm font-light leading-relaxed">Thanks! Our team will contact you shortly.</p>
+                  <h4 className="text-xl font-extrabold text-slate-900 font-sans">Audit Request Received!</h4>
+                  <p className="text-slate-500 text-xs sm:text-sm font-light leading-relaxed font-sans">Thanks! Our team will contact you shortly.</p>
                   <button 
                     onClick={() => setSubmitSuccess(false)}
-                    className="w-full mt-2 py-3 rounded-full bg-[#EA580C] text-white font-bold text-xs uppercase tracking-wider hover:bg-[#ff7233] transition-colors cursor-pointer"
+                    className="w-full mt-2 py-3 rounded-full bg-[#EA580C] text-white font-bold text-xs uppercase tracking-wider hover:bg-[#ff7233] transition-colors cursor-pointer font-sans"
                   >
                     Done
                   </button>
@@ -1204,7 +1223,7 @@ function FooterTakeoverCard({ setShowEmailForm }) {
               Book a Strategy Call
             </button>
             <a 
-              href="https://wa.me/911234567890?text=How%20can%20we%20help%20you%3F"
+              href="https://wa.me/919352234643?text=How%20can%20we%20help%20you%3F"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-5 rounded-full border border-[#EA580C]/30 bg-[#EA580C]/5 text-[#EA580C] font-bold hover:bg-[#EA580C]/15 hover:shadow-[0_0_20px_rgba(234,88,12,0.15)] transition-all duration-300 flex-1 text-center cursor-pointer glow-btn text-sm md:text-base uppercase tracking-wider"
@@ -1217,11 +1236,11 @@ function FooterTakeoverCard({ setShowEmailForm }) {
             <a href="#projects" className="text-[#EA580C] hover:text-white transition-colors duration-300" title="View Proofs">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
             </a>
-            <a href="tel:+919876543210" className="text-[#EA580C] hover:text-white transition-colors duration-300 flex items-center gap-2" title="Call Us">
+            <a href="tel:+919352234643" className="text-[#EA580C] hover:text-white transition-colors duration-300 flex items-center gap-2" title="Call Us">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.387a12.035 12.035 0 01-7.108-7.108c-.155-.44.011-.927.387-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.11-1.008H5.03c-1.137 0-2.054.924-2.054 2.054V6.75z" />
               </svg>
-              <span className="text-sm font-bold tracking-wider font-mono text-white/90 hover:text-white">+91 98765 43210</span>
+              <span className="text-sm font-bold tracking-wider font-mono text-white/90 hover:text-white">+91 93522 34643</span>
             </a>
           </div>
         </div>
@@ -1233,14 +1252,43 @@ function FooterTakeoverCard({ setShowEmailForm }) {
 function PlaybookPopup({ onClose }) {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
 
-  const handleSubmit = (e) => {
+  const PLAYBOOK_PDF_URL = 'https://d2cgrow.com/d2c-growth-playbook.pdf' // Replace with your actual PDF URL/path
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    setSubmitted(true)
-    setTimeout(() => {
-      onClose()
-    }, 2000)
+    if (!email || !phone) {
+      setSubmitError('Please enter both email and phone number.')
+      return
+    }
+    setSubmitError(null)
+    setIsSubmitting(true)
+
+    try {
+      await submitLeadData({
+        name: 'Playbook Subscriber',
+        email: email,
+        phone: phone.startsWith('+91') ? phone : `+91${phone}`,
+        website: 'd2cgrow.com/playbook',
+        industry: 'D2C',
+        budget: 'Playbook Download',
+        source: 'playbook_popup',
+        message: 'Requested D2C Growth Playbook PDF'
+      })
+
+      setSubmitted(true)
+      setIsSubmitting(false)
+
+      // Automatically open the PDF in a new tab
+      window.open(PLAYBOOK_PDF_URL, '_blank')
+    } catch (err) {
+      console.error('Playbook lead submit failed:', err)
+      setSubmitError('Something went wrong. Please try again.')
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -1269,23 +1317,43 @@ function PlaybookPopup({ onClose }) {
         </button>
 
         {submitted ? (
-          <div className="text-center py-8 space-y-4">
-            <div className="w-16 h-16 bg-[#EA580C]/10 border border-[#EA580C]/40 rounded-full flex items-center justify-center text-2xl text-[#EA580C] mx-auto animate-bounce font-bold">
+          <div className="text-center py-8 space-y-5">
+            <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/40 rounded-full flex items-center justify-center text-2xl text-emerald-400 mx-auto animate-bounce font-bold">
               ✓
             </div>
-            <h3 className="text-xl font-bold text-white">Playbook Sent!</h3>
-            <p className="text-gray-400 text-sm">Check your inbox. Scaling frameworks are on their way.</p>
+            <h3 className="text-xl font-bold text-white uppercase tracking-tight">Playbook Sent!</h3>
+            <p className="text-gray-400 text-xs sm:text-sm max-w-xs mx-auto">
+              Your details were saved. The playbook has been opened in a new tab.
+            </p>
+            
+            <a 
+              href={PLAYBOOK_PDF_URL} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-[#EA580C] hover:bg-[#ff7233] text-white font-extrabold text-xs uppercase tracking-wider transition-all duration-300 shadow-[0_4px_15px_rgba(234,88,12,0.3)] hover:scale-102"
+            >
+              📥 Download Playbook PDF
+            </a>
+            
+            <div className="pt-2">
+              <button 
+                onClick={onClose}
+                className="text-xs text-gray-500 hover:text-white transition-colors underline bg-transparent border-none cursor-pointer"
+              >
+                Close Window
+              </button>
+            </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5 text-left">
             {/* Free Resource Badge */}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#EA580C]/35 bg-[#EA580C]/5 text-[9px] uppercase tracking-widest font-bold text-[#EA580C]">
               ✨ Free Resource
             </div>
 
             {/* Title */}
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight tracking-tight mt-2">
-              Before you go grab our <span className="text-[#EA580C]">D2C Growth</span> <span className="text-[#A78BFA]">Playbook</span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight tracking-tight mt-2 uppercase">
+              Before you go grab our <span className="text-[#EA580C]">D2C Growth</span> <span className="text-violet-400">Playbook</span>
             </h2>
 
             {/* Subtext */}
@@ -1316,11 +1384,11 @@ function PlaybookPopup({ onClose }) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="Work Email" 
+                placeholder="Work Email *" 
                 className="w-full p-4 rounded-xl bg-slate-900/60 border border-white/10 outline-none text-white text-xs sm:text-sm placeholder:text-gray-500 focus:border-[#EA580C]/40 transition-colors"
               />
 
-              <div className="flex items-center bg-slate-900/60 border border-white/10 rounded-xl px-4 py-1.5 focus-within:border-[#EA580C]/40 transition-colors">
+              <div className="flex items-center bg-slate-900/60 border border-white/10 rounded-xl px-4 py-1.5 focus-within:border-[#EA580C]/40 transition-colors font-mono">
                 <div className="flex items-center gap-1.5 text-xs sm:text-sm text-white border-r border-white/10 pr-3 mr-3 select-none">
                   <span>🇮🇳</span>
                   <span>+91</span>
@@ -1330,26 +1398,33 @@ function PlaybookPopup({ onClose }) {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
-                  placeholder="Phone Number" 
+                  placeholder="Phone Number *" 
                   className="w-full bg-transparent outline-none text-white text-xs sm:text-sm placeholder:text-gray-500"
                 />
               </div>
             </div>
 
+            {submitError && (
+              <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300 text-center font-medium">
+                {submitError}
+              </div>
+            )}
+
             {/* Action button */}
             <button 
               type="submit" 
-              className="w-full py-4 rounded-xl bg-[#EA580C] hover:bg-[#ff7233] text-white font-bold text-xs sm:text-sm transition-all duration-300 shadow-[0_4px_20px_rgba(234,88,12,0.3)] cursor-pointer flex items-center justify-center gap-2 group"
+              disabled={isSubmitting}
+              className="w-full py-4 rounded-xl bg-[#EA580C] hover:bg-[#ff7233] text-white font-bold text-xs sm:text-sm transition-all duration-300 shadow-[0_4px_20px_rgba(234,88,12,0.3)] cursor-pointer flex items-center justify-center gap-2 group disabled:opacity-50"
             >
               <svg className="w-4 h-4 shrink-0 transition-transform group-hover:-translate-y-0.5" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
               </svg>
-              Send Me the Playbook
+              {isSubmitting ? 'Sending Playbook...' : 'Send Me the Playbook'}
               <span className="transform group-hover:translate-x-1 transition-transform">→</span>
             </button>
 
             {/* Footnote */}
-            <p className="text-[10px] text-gray-500 text-center font-light">
+            <p className="text-[10px] text-gray-500 text-center font-light font-sans">
               No spam. Unsubscribe anytime. Used by 150+ D2C founders.
             </p>
           </form>
@@ -1551,11 +1626,217 @@ function CaseStudyPage({ project, onClose, setShowEmailForm }) {
   )
 }
 
+function InfoSubPage({ pageType, onClose, setShowEmailForm }) {
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pageType])
+
+  const renderContent = () => {
+    switch (pageType) {
+      case 'about':
+        return (
+          <div className="space-y-8 font-light text-gray-300 leading-relaxed text-sm sm:text-base">
+            <p>
+              <strong>D2cGrow</strong> is an elite performance marketing and conversion rate optimization (CRO) agency based in Ahmedabad, Gujarat, focused entirely on scaling D2C and high-growth e-commerce brands. Founded by industry veterans, we operate with a singular philosophy: <strong>result-first scaling</strong>.
+            </p>
+            <p>
+              We do not hide behind vanity metrics like impressions, clicks, or likes. Instead, we track what actually matters to your business: real gross sales, prepaid order percentage, ad spend efficiency, and customer lifetime value (LTV).
+            </p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 my-10 pt-6">
+              <div className="p-6 rounded-2xl border border-[#EA580C]/20 bg-[#EA580C]/[0.02]">
+                <h3 className="text-[#EA580C] font-bold text-lg mb-2 font-sans">Our Mission</h3>
+                <p className="text-xs text-gray-400 font-sans">To build sustainable growth frameworks that scale D2C brands profitably. We help you transition from erratic spikes to consistent, compounding sales streams.</p>
+              </div>
+              <div className="p-6 rounded-2xl border border-[#EA580C]/20 bg-[#EA580C]/[0.02]">
+                <h3 className="text-[#EA580C] font-bold text-lg mb-2 font-sans">Our Philosophy</h3>
+                <p className="text-xs text-gray-400 font-sans">Data over gut-feeling. Creative as the primary lever for scaling. Full funnel integration across paid acquisition, conversion rate optimization, and retention marketing.</p>
+              </div>
+            </div>
+
+            <h3 className="text-xl font-bold text-white tracking-tight mt-10 font-sans">Why Brands Scale With Us</h3>
+            <ul className="space-y-4 list-none pl-0">
+              <li className="flex gap-3">
+                <span className="text-[#EA580C] font-bold">✓</span>
+                <div>
+                  <strong>D2C Category Expertise:</strong> We understand the unique dynamics, margins, and operational challenges of e-commerce brands in India.
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-[#EA580C] font-bold">✓</span>
+                <div>
+                  <strong>UGC-First Creative Strategy:</strong> We script, shoot, and test dozens of custom high-converting ad angles weekly to combat fatigue.
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-[#EA580C] font-bold">✓</span>
+                <div>
+                  <strong>Prepaid Incentive Funnels:</strong> We actively design and deploy page adjustments to push prepaid order share, reducing costly RTO percentages.
+                </div>
+              </li>
+            </ul>
+
+            <h3 className="text-xl font-bold text-white tracking-tight mt-10 font-sans">Ahmedabad Roots, Global Standards</h3>
+            <p>
+              Operating from Titanium Business Park, Ahmedabad, we manage marketing budgets for some of the fastest-growing apparel, jewelry, and cosmetics brands in India. Our setups bridge server-side API integrations (CAPI) with highly-persuasive visual marketing.
+            </p>
+          </div>
+        )
+      case 'privacy':
+        return (
+          <div className="space-y-6 font-light text-gray-400 leading-relaxed text-xs sm:text-sm">
+            <p className="text-gray-300 font-mono">Last updated: May 26, 2026</p>
+            <p>
+              At D2cGrow, accessible from d2cgrow.com, one of our main priorities is the privacy of our visitors. This Privacy Policy document contains types of information that is collected and recorded by D2cGrow and how we use it.
+            </p>
+
+            <h3 className="text-lg font-bold text-white mt-8 uppercase tracking-wide font-sans">Information We Collect</h3>
+            <p>
+              We collect personal information that you voluntarily provide to us when you fill out contact forms or sign up to receive resources on our website. This includes:
+            </p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>Your name, email address, phone number, and brand website URL.</li>
+              <li>Industry category, estimated monthly ad budget, and any details or messages you submit through text areas.</li>
+            </ul>
+
+            <h3 className="text-lg font-bold text-white mt-8 uppercase tracking-wide font-sans">How We Use Your Information</h3>
+            <p>
+              We use the collected information in various ways, including to:
+            </p>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>Provide, operate, and maintain our website.</li>
+              <li>Schedule, prepare for, and conduct the requested Free Brand Audit call.</li>
+              <li>Send resources, playbooks, or templates you opt-in to download.</li>
+              <li>Understand and analyze how you interact with our website to optimize layout and user experience.</li>
+              <li>Communicate with you, either directly or through one of our partners, for customer service, updates, or marketing emails.</li>
+            </ul>
+
+            <h3 className="text-lg font-bold text-white mt-8 uppercase tracking-wide font-sans">Log Files and Cookies</h3>
+            <p>
+              D2cGrow follows a standard procedure of using log files. These files log visitors when they visit websites. The information collected by log files includes internet protocol (IP) addresses, browser type, Internet Service Provider (ISP), date and time stamp, referring/exit pages, and possibly the number of clicks. These are not linked to any information that is personally identifiable. We also use cookies to store information including visitors' preferences, and to track playbook popup dismissal.
+            </p>
+
+            <h3 className="text-lg font-bold text-white mt-8 uppercase tracking-wide font-sans">Third-Party Services</h3>
+            <p>
+              We may utilize third-party integrations (such as Zapier, Make, or Google Apps Script) to securely process and store lead forms. These service providers only access your data to perform specific tasks on our behalf and are obligated not to disclose or use it for any other purpose.
+            </p>
+
+            <h3 className="text-lg font-bold text-white mt-8 uppercase tracking-wide font-sans">Consent</h3>
+            <p>
+              By using our website, you hereby consent to our Privacy Policy and agree to its terms.
+            </p>
+          </div>
+        )
+      case 'terms':
+        return (
+          <div className="space-y-6 font-light text-gray-400 leading-relaxed text-xs sm:text-sm">
+            <p className="text-gray-300 font-mono">Effective Date: May 26, 2026</p>
+            
+            <h3 className="text-lg font-bold text-white mt-8 uppercase tracking-wide font-sans">1. Agreement to Terms</h3>
+            <p>
+              By accessing our website at d2cgrow.com, you agree to be bound by these Terms of Service, all applicable laws and regulations, and agree that you are responsible for compliance with any applicable local laws. If you do not agree with any of these terms, you are prohibited from using or accessing this site.
+            </p>
+
+            <h3 className="text-lg font-bold text-white mt-8 uppercase tracking-wide font-sans">2. Services Offered</h3>
+            <p>
+              D2cGrow provides digital performance marketing consulting, conversion rate optimization audit services, and e-commerce growth resources. The "Free Brand Audit" is a complimentary consultation offered subject to availability and our review of eligibility. We reserve the right to decline audit requests for any reason.
+            </p>
+
+            <h3 className="text-lg font-bold text-white mt-8 uppercase tracking-wide font-sans">3. Intellectual Property Rights</h3>
+            <p>
+              All materials, code, logos, visual diagrams, copy frameworks, and case studies featured on this website are the intellectual property of D2cGrow. You may not copy, modify, distribute, or reuse any content or design elements without written permission from us.
+            </p>
+
+            <h3 className="text-lg font-bold text-white mt-8 uppercase tracking-wide font-sans">4. Limitation of Liability</h3>
+            <p>
+              In no event shall D2cGrow or its suppliers be liable for any damages (including, without limitation, damages for loss of data or profit, or due to business interruption) arising out of the use or inability to use the materials on D2cGrow's website, even if D2cGrow has been notified orally or in writing of the possibility of such damage.
+            </p>
+
+            <h3 className="text-lg font-bold text-white mt-8 uppercase tracking-wide font-sans">5. Governing Law</h3>
+            <p>
+              These terms and conditions are governed by and construed in accordance with the laws of Gujarat, India and you irrevocably submit to the exclusive jurisdiction of the courts located in Ahmedabad, Gujarat for any disputes.
+            </p>
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
+  const title = pageType === 'about' ? 'About D2cGrow' : pageType === 'privacy' ? 'Privacy Policy' : 'Terms of Service'
+
+  return (
+    <div className="bg-[#0B0C15] text-white min-h-screen font-sans selection:bg-[#EA580C] relative pb-20">
+      <div className="absolute top-0 left-[10%] w-[600px] h-[600px] bg-gradient-to-br from-[#EA580C]/10 to-transparent blur-[120px] rounded-full pointer-events-none -z-10"></div>
+      
+      {/* Header Nav */}
+      <header className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between border-b border-white/5">
+        <Logo />
+        <button 
+          onClick={onClose}
+          className="px-5 py-2.5 rounded-full border border-white/20 hover:border-[#EA580C] hover:bg-[#EA580C]/5 text-xs sm:text-sm font-bold transition-all duration-300 flex items-center gap-2 cursor-pointer group"
+        >
+          <span className="transform group-hover:-translate-x-1 transition-transform">←</span>
+          BACK TO HOME
+        </button>
+      </header>
+
+      <main className="max-w-4xl mx-auto px-6 pt-12 md:pt-16">
+        <div className="mb-10 text-left text-sans">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[#EA580C]/35 bg-[#EA580C]/5 text-xs font-bold text-[#EA580C] mb-6 uppercase tracking-wider font-mono">
+            📄 D2cGrow • {pageType}
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight text-white mb-6 uppercase">
+            {title}
+          </h1>
+        </div>
+
+        <div className="bg-slate-900/[0.15] border border-white/5 rounded-[32px] p-6 sm:p-10 shadow-xl backdrop-blur-xl mb-16 text-left font-sans">
+          {renderContent()}
+        </div>
+
+        {/* Call to Action Card */}
+        <div className="relative rounded-[40px] border border-[#EA580C]/20 bg-[#05060A] overflow-hidden p-8 sm:p-12 md:p-16 shadow-[0_20px_50px_rgba(234,88,12,0.15)] flex flex-col items-center text-center font-sans">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#EA580C/[0.08]_0%,transparent_60%)] pointer-events-none"></div>
+          <span className="text-[#EA580C] font-mono text-xs uppercase tracking-[0.3em] font-bold mb-4">READY TO SCALE?</span>
+          <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-none mb-6 uppercase">
+            Let us audit your marketing funnel
+          </h2>
+          <p className="text-gray-400 text-xs sm:text-sm font-light leading-relaxed max-w-lg mb-8">
+            Get a comprehensive ads and conversion review worth ₹25,000 completely free of charge. See where your budget is being wasted.
+          </p>
+          <button 
+            onClick={() => setShowEmailForm(true)}
+            className="px-8 py-4 sm:px-10 sm:py-5 rounded-full bg-[#EA580C] hover:bg-[#ff7233] text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider transition-all duration-300 shadow-[0_5px_25px_rgba(234,88,12,0.4)] flex items-center gap-3 cursor-pointer group"
+          >
+            Get Free Audit
+            <span className="transform group-hover:translate-x-1.5 transition-transform duration-300">→</span>
+          </button>
+        </div>
+      </main>
+    </div>
+  )
+}
+
 export default function PortfolioWebsite() {
 
   const [selectedProject, setSelectedProject] = useState(null)
+  const [activeSubPage, setActiveSubPage] = useState(null)
   const [windowWidth, setWindowWidth] = useState(1200)
   const [showPlaybook, setShowPlaybook] = useState(false)
+  const [showEmailForm, setShowEmailForm] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [activeCategory, setActiveCategory] = useState('clothing')
+
+  const handleMobileNavClick = (sectionId) => {
+    setMobileMenuOpen(false)
+    setTimeout(() => {
+      const element = document.getElementById(sectionId)
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 150)
+  }
 
   useEffect(() => {
     setWindowWidth(window.innerWidth)
@@ -1576,10 +1857,6 @@ export default function PortfolioWebsite() {
       if (timer) clearTimeout(timer)
     }
   }, [])
-
-  const [showEmailForm, setShowEmailForm] = useState(false)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [activeCategory, setActiveCategory] = useState('clothing')
 
   const [formData, setFormData] = useState({
     name: '',
@@ -1718,7 +1995,13 @@ export default function PortfolioWebsite() {
       <div className="hidden lg:block custom-cursor"></div>
       <div className="hidden lg:block custom-cursor-dot"></div>
 
-      {selectedProject ? (
+      {activeSubPage ? (
+        <InfoSubPage 
+          pageType={activeSubPage} 
+          onClose={() => setActiveSubPage(null)} 
+          setShowEmailForm={setShowEmailForm}
+        />
+      ) : selectedProject ? (
         <CaseStudyPage 
           project={selectedProject} 
           onClose={() => setSelectedProject(null)} 
@@ -1743,9 +2026,9 @@ export default function PortfolioWebsite() {
               href="#contact"
               onClick={(e) => {
                 e.preventDefault()
-                document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+                setShowEmailForm(true)
               }}
-              className="px-4 py-1.5 rounded-full border border-orange-500/30 bg-orange-500/5 text-[11px] font-semibold text-orange-500 tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer glow-btn"
+              className="px-4 py-1.5 rounded-full border border-orange-500/30 bg-orange-500/5 text-[11px] font-semibold text-orange-500 tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer glow-btn font-sans"
             >
               Book a Call
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1755,15 +2038,16 @@ export default function PortfolioWebsite() {
           </div>
 
           {/* Desktop Nav Links */}
-          <div className="hidden md:flex gap-10 text-sm text-[#EA580C]/80 font-light items-center">
-            <a href="#services" className="hover:text-white transition-all duration-300 hover:scale-105">Services</a>
-            <a href="#projects" className="hover:text-white transition-all duration-300 hover:scale-105">Proofs</a>
-            <a href="#promises" className="hover:text-white transition-all duration-300 hover:scale-105">Steps to Boost Revenue</a>
+          <div className="hidden md:flex gap-10 text-sm text-[#EA580C]/80 font-light items-center font-sans">
+            <a href="#services" onClick={() => { setActiveSubPage(null); setTimeout(() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-white transition-all duration-300 hover:scale-105">Services</a>
+            <a href="#projects" onClick={() => { setActiveSubPage(null); setTimeout(() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-white transition-all duration-300 hover:scale-105">Proofs</a>
+            <a href="#promises" onClick={() => { setActiveSubPage(null); setTimeout(() => document.getElementById('promises')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-white transition-all duration-300 hover:scale-105">Steps to Boost Revenue</a>
             <a 
               href="#contact" 
               onClick={(e) => {
                 e.preventDefault()
-                document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+                setActiveSubPage(null)
+                setTimeout(() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }), 100)
               }}
               className="hover:text-white transition-all duration-300 hover:scale-105"
             >
@@ -1793,16 +2077,16 @@ export default function PortfolioWebsite() {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="absolute inset-x-0 top-full bg-[#0B0C15]/95 border-b border-white/5 md:hidden flex flex-col px-8 py-8 gap-5 backdrop-blur-3xl shadow-2xl overflow-hidden"
+              className="absolute inset-x-0 top-full z-[60] bg-[#0B0C15]/95 border-b border-white/5 md:hidden flex flex-col px-8 py-8 gap-5 backdrop-blur-3xl shadow-2xl overflow-hidden font-sans"
             >
               <a 
                 href="#services" 
                 onClick={(e) => {
                   e.preventDefault()
-                  setMobileMenuOpen(false)
-                  document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' })
+                  setActiveSubPage(null)
+                  handleMobileNavClick('services')
                 }}
-                className="text-base text-gray-300 hover:text-[#EA580C] transition-colors duration-300 font-light tracking-wider"
+                className="text-base text-gray-300 hover:text-[#EA580C] cursor-pointer transition-colors duration-300 font-light tracking-wider"
               >
                 Services
               </a>
@@ -1810,10 +2094,10 @@ export default function PortfolioWebsite() {
                 href="#projects" 
                 onClick={(e) => {
                   e.preventDefault()
-                  setMobileMenuOpen(false)
-                  document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })
+                  setActiveSubPage(null)
+                  handleMobileNavClick('projects')
                 }}
-                className="text-base text-gray-300 hover:text-[#EA580C] transition-colors duration-300 font-light tracking-wider"
+                className="text-base text-gray-300 hover:text-[#EA580C] cursor-pointer transition-colors duration-300 font-light tracking-wider"
               >
                 Proofs
               </a>
@@ -1821,10 +2105,10 @@ export default function PortfolioWebsite() {
                 href="#promises" 
                 onClick={(e) => {
                   e.preventDefault()
-                  setMobileMenuOpen(false)
-                  document.getElementById('promises')?.scrollIntoView({ behavior: 'smooth' })
+                  setActiveSubPage(null)
+                  handleMobileNavClick('promises')
                 }}
-                className="text-base text-gray-300 hover:text-[#EA580C] transition-colors duration-300 font-light tracking-wider"
+                className="text-base text-gray-300 hover:text-[#EA580C] cursor-pointer transition-colors duration-300 font-light tracking-wider"
               >
                 Steps to Boost Revenue
               </a>
@@ -1832,10 +2116,10 @@ export default function PortfolioWebsite() {
                 href="#contact" 
                 onClick={(e) => {
                   e.preventDefault()
-                  setMobileMenuOpen(false)
-                  document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+                  setActiveSubPage(null)
+                  handleMobileNavClick('contact')
                 }}
-                className="text-base text-gray-300 hover:text-[#EA580C] transition-colors duration-300 font-light tracking-wider"
+                className="text-base text-gray-300 hover:text-[#EA580C] cursor-pointer transition-colors duration-300 font-light tracking-wider"
               >
                 Contact Us
               </a>
@@ -1844,7 +2128,7 @@ export default function PortfolioWebsite() {
                 onClick={(e) => {
                   e.preventDefault()
                   setMobileMenuOpen(false)
-                  document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
+                  setShowEmailForm(true)
                 }}
                 className="w-full mt-2 py-3 rounded-full bg-[#EA580C] text-white font-bold text-sm tracking-wider text-center cursor-pointer glow-btn flex items-center justify-center gap-2"
               >
@@ -1870,7 +2154,7 @@ export default function PortfolioWebsite() {
         {/* Title */}
         <h1 ref={headingRef} className="text-4xl sm:text-6xl md:text-7xl font-extrabold leading-[1.1] tracking-tight mb-6 text-white font-sans uppercase">
           Scaling Brands <br />
-          with <span className="bg-[#EA580C] text-white px-4 py-1.5 sm:px-6 sm:py-2 rounded-2xl sm:rounded-3xl shadow-[0_4px_25px_rgba(234,88,12,0.3)] font-black inline-flex items-center justify-center text-xl sm:text-3xl md:text-4xl align-middle font-sans mt-2"><TextLoop /></span>
+          with <span className="bg-[#EA580C] text-white px-3.5 py-1.5 sm:px-6 sm:py-2 rounded-2xl sm:rounded-3xl shadow-[0_4px_25px_rgba(234,88,12,0.3)] font-black inline-flex items-center justify-center text-base sm:text-2xl md:text-3xl lg:text-4xl align-middle font-sans mt-2"><TextLoop /></span>
         </h1>
 
         {/* Description */}
@@ -2364,185 +2648,201 @@ export default function PortfolioWebsite() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 backdrop-blur-xl p-4 md:p-6"
+            className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 backdrop-blur-xl p-4 sm:p-6 overflow-y-auto"
           >
             <motion.div 
               initial={{ scale: 0.95, opacity: 0, y: 30 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 30 }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="max-w-2xl w-full bg-[#0B0C15] border border-[#EA580C]/15 rounded-[32px] p-8 md:p-10 relative shadow-2xl"
+              className="max-w-2xl w-full bg-[#0B0C15] border border-[#EA580C]/15 rounded-[24px] sm:rounded-[32px] p-5 xs:p-6 sm:p-10 relative shadow-2xl my-auto max-h-[92vh] overflow-y-auto scrollbar-thin"
             >
               <button 
                 onClick={() => setShowEmailForm(false)} 
-                className="absolute top-6 right-6 w-11 h-11 rounded-full bg-[#EA580C]/10 hover:bg-[#EA580C] hover:text-white transition-all duration-300 flex items-center justify-center text-lg font-light text-[#EA580C]"
+                className="absolute top-4 right-4 sm:top-6 sm:right-6 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-[#EA580C]/10 hover:bg-[#EA580C] hover:text-white transition-all duration-300 flex items-center justify-center text-sm sm:text-lg font-light text-[#EA580C] z-30"
               >
                 ✕
               </button>
-              <p className="text-[#EA580C] uppercase tracking-[0.3em] text-xs font-bold mb-4 font-sans">Contact Form</p>
-              <h2 className="text-3xl md:text-4xl font-semibold tracking-[-0.04em] mb-8 font-sans">Book Your Free Brand Audit</h2>
               
-              {submitSuccess ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
-                  <div className="w-16 h-16 bg-[#EA580C]/10 border border-[#EA580C]/30 rounded-full flex items-center justify-center text-3xl text-[#EA580C] animate-bounce font-bold">
-                    ✓
-                  </div>
-                  <h3 className="text-2xl font-bold text-white">Audit Request Received!</h3>
-                  <p className="text-gray-400 text-sm max-w-sm">Thanks! Our team will contact you shortly.</p>
-                  <button 
-                    onClick={() => {
-                      setSubmitSuccess(false)
-                      setShowEmailForm(false)
-                    }} 
-                    className="mt-4 px-6 py-2.5 rounded-full bg-[#EA580C] hover:bg-[#ff7233] text-white text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer"
-                  >
-                    Done
-                  </button>
-                </div>
-              ) : (
-                <form className="space-y-4" onSubmit={handleFormSubmit}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-                    {/* Full Name */}
-                    <div>
-                      <label className="text-[9px] font-bold text-gray-500 block mb-1">FULL NAME *</label>
-                      <input 
-                        type="text" 
-                        name="name" 
-                        value={formData.name} 
-                        onChange={handleInputChange} 
-                        required 
-                        placeholder="Your Name" 
-                        className="w-full p-3.5 rounded-xl bg-white/[0.02] border border-white/10 outline-none text-white text-xs placeholder:text-gray-600 focus:border-[#EA580C]/45 transition-colors" 
-                      />
-                    </div>
-                    
-                    {/* Email */}
-                    <div>
-                      <label className="text-[9px] font-bold text-gray-500 block mb-1">EMAIL *</label>
-                      <input 
-                        type="email" 
-                        name="email" 
-                        value={formData.email} 
-                        onChange={handleInputChange} 
-                        required 
-                        placeholder="work@company.com" 
-                        className="w-full p-3.5 rounded-xl bg-white/[0.02] border border-white/10 outline-none text-white text-xs placeholder:text-gray-600 focus:border-[#EA580C]/45 transition-colors" 
-                      />
-                    </div>
+              <div className="text-left font-sans">
+                <span className="text-[#EA580C] font-mono text-[10px] sm:text-xs uppercase tracking-[0.25em] font-bold block mb-2">LIMITED SPOTS ONLY</span>
+                <h3 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-tight mb-2 leading-none">
+                  Book Your Free Brand Audit
+                </h3>
+                <p className="text-xs text-gray-400 font-light mb-6">
+                  Get a comprehensive ads and conversion review worth ₹25,000 completely free of charge. See where your budget is being wasted.
+                </p>
 
-                    {/* Phone Number */}
-                    <div>
-                      <label className="text-[9px] font-bold text-gray-500 block mb-1">PHONE NUMBER *</label>
-                      <div className="flex items-center bg-white/[0.02] border border-white/10 rounded-xl px-3 focus-within:border-[#EA580C]/45 transition-colors">
-                        <span className="text-xs text-gray-500 mr-2 border-r border-white/10 pr-2 select-none">🇮🇳 +91</span>
+                {submitSuccess ? (
+                  <div className="py-12 flex flex-col items-center justify-center space-y-4 text-center">
+                    <div className="w-16 h-16 bg-[#EA580C]/10 text-[#EA580C] rounded-full flex items-center justify-center text-3xl font-bold select-none border border-[#EA580C]/20">
+                      ✓
+                    </div>
+                    <h4 className="text-xl font-extrabold text-white">Audit Request Received!</h4>
+                    <p className="text-gray-400 text-xs sm:text-sm font-light max-w-xs">
+                      Thanks for applying. Our senior strategist will review your brand details and reach out within 24 hours.
+                    </p>
+                    <button 
+                      onClick={() => {
+                        setShowEmailForm(false)
+                        setSubmitSuccess(false)
+                      }}
+                      className="px-8 py-3 rounded-full bg-[#EA580C] hover:bg-[#ff7233] text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                    >
+                      Done
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleFormSubmit} className="space-y-4 text-xs">
+                    
+                    {/* Basic Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      
+                      {/* Name */}
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 block mb-1 font-mono">YOUR NAME *</label>
                         <input 
-                          type="tel" 
-                          name="phone"
-                          value={formData.phone}
+                          type="text" 
+                          name="name"
+                          value={formData.name}
                           onChange={handleInputChange}
                           required
-                          placeholder="98765 43210"
-                          className="w-full py-3.5 bg-transparent outline-none text-white text-xs placeholder:text-gray-600"
+                          placeholder="Full Name"
+                          className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 outline-none text-white focus:border-[#EA580C] transition-colors"
                         />
                       </div>
+
+                      {/* Work Email */}
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 block mb-1 font-mono">WORK EMAIL *</label>
+                        <input 
+                          type="email" 
+                          name="email"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="name@company.com"
+                          className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 outline-none text-white focus:border-[#EA580C] transition-colors"
+                        />
+                      </div>
+
+                      {/* Phone Number */}
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 block mb-1 font-mono">PHONE NUMBER *</label>
+                        <div className="flex items-center bg-slate-900 border border-white/10 rounded-xl px-3 focus-within:border-[#EA580C] transition-colors font-mono">
+                          <span className="text-gray-500 mr-2 border-r border-white/10 pr-2 select-none">+91</span>
+                          <input 
+                            type="tel" 
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleInputChange}
+                            required
+                            placeholder="93522 34643"
+                            className="w-full py-3 bg-transparent outline-none text-white"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Website URL */}
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 block mb-1 font-mono">WEBSITE URL *</label>
+                        <input 
+                          type="text" 
+                          name="website"
+                          value={formData.website}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="yourbrand.com"
+                          className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 outline-none text-white focus:border-[#EA580C] transition-colors"
+                        />
+                      </div>
+
+                      {/* Industry */}
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 block mb-1 font-mono">INDUSTRY</label>
+                        <select 
+                          name="industry"
+                          value={formData.industry}
+                          onChange={handleInputChange}
+                          className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 outline-none text-white focus:border-[#EA580C] transition-colors"
+                        >
+                          <option value="">Select Industry</option>
+                          <option value="apparel">Apparel & Fashion</option>
+                          <option value="jewelry">Jewelry</option>
+                          <option value="beauty">Beauty & Cosmetics</option>
+                          <option value="food">Food & Beverage</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+
+                      {/* Monthly ad budget */}
+                      <div>
+                        <label className="text-[10px] font-bold text-gray-400 block mb-1 font-mono">MONTHLY AD BUDGET</label>
+                        <select 
+                          name="budget"
+                          value={formData.budget}
+                          onChange={handleInputChange}
+                          className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 outline-none text-white focus:border-[#EA580C] transition-colors"
+                        >
+                          <option value="">Select Budget</option>
+                          <option value="under_1l">Under ₹1L</option>
+                          <option value="1l_5l">₹1L - ₹5L</option>
+                          <option value="5l_10l">₹5L - ₹10L</option>
+                          <option value="above_10l">Above ₹10L</option>
+                        </select>
+                      </div>
+
                     </div>
 
-                    {/* Website */}
+                    {/* Source */}
                     <div>
-                      <label className="text-[9px] font-bold text-gray-500 block mb-1">BRAND WEBSITE URL *</label>
-                      <input 
-                        type="text" 
-                        name="website" 
-                        value={formData.website} 
-                        onChange={handleInputChange} 
-                        required 
-                        placeholder="www.yourbrand.com" 
-                        className="w-full p-3.5 rounded-xl bg-white/[0.02] border border-white/10 outline-none text-white text-xs placeholder:text-gray-600 focus:border-[#EA580C]/45 transition-colors" 
-                      />
-                    </div>
-
-                    {/* Industry */}
-                    <div>
-                      <label className="text-[9px] font-bold text-gray-500 block mb-1">INDUSTRY</label>
+                      <label className="text-[10px] font-bold text-gray-400 block mb-1 font-mono">HOW DID YOU HEAR ABOUT US?</label>
                       <select 
-                        name="industry"
-                        value={formData.industry}
+                        name="source"
+                        value={formData.source}
                         onChange={handleInputChange}
-                        className="w-full p-3.5 rounded-xl bg-[#0B0C15] border border-white/10 outline-none text-white text-xs focus:border-[#EA580C]/45 transition-colors"
+                        className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 outline-none text-white focus:border-[#EA580C] transition-colors"
                       >
-                        <option value="">Select Industry</option>
-                        <option value="apparel">Apparel & Fashion</option>
-                        <option value="jewelry">Jewelry</option>
-                        <option value="beauty">Beauty & Cosmetics</option>
-                        <option value="food">Food & Beverage</option>
+                        <option value="">Select Source</option>
+                        <option value="google">Google</option>
+                        <option value="linkedin">LinkedIn</option>
+                        <option value="instagram">Instagram</option>
+                        <option value="recommendation">Recommendation</option>
                         <option value="other">Other</option>
                       </select>
                     </div>
 
-                    {/* Budget */}
+                    {/* Message */}
                     <div>
-                      <label className="text-[9px] font-bold text-gray-500 block mb-1">MONTHLY AD BUDGET</label>
-                      <select 
-                        name="budget"
-                        value={formData.budget}
+                      <label className="text-[10px] font-bold text-gray-400 block mb-1 font-mono">ANY ADDITIONAL MESSAGE</label>
+                      <textarea 
+                        name="message"
+                        value={formData.message}
                         onChange={handleInputChange}
-                        className="w-full p-3.5 rounded-xl bg-[#0B0C15] border border-white/10 outline-none text-white text-xs focus:border-[#EA580C]/45 transition-colors"
-                      >
-                        <option value="">Select Budget</option>
-                        <option value="under_1l">Under ₹1L</option>
-                        <option value="1l_5l">₹1L - ₹5L</option>
-                        <option value="5l_10l">₹5L - ₹10L</option>
-                        <option value="above_10l">Above ₹10L</option>
-                      </select>
+                        rows="2"
+                        placeholder="E.g., current ROAS blockers, targets..."
+                        className="w-full p-3 rounded-xl bg-slate-900 border border-white/10 outline-none text-white focus:border-[#EA580C] transition-colors"
+                      ></textarea>
                     </div>
-                  </div>
 
-                  {/* Source */}
-                  <div className="text-left">
-                    <label className="text-[9px] font-bold text-gray-500 block mb-1 font-sans">HOW DID YOU FIND US?</label>
-                    <select 
-                      name="source"
-                      value={formData.source}
-                      onChange={handleInputChange}
-                      className="w-full p-3.5 rounded-xl bg-[#0B0C15] border border-white/10 outline-none text-white text-xs focus:border-[#EA580C]/45 transition-colors"
+                    {submitError && (
+                      <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-800 text-rose-300 text-center font-medium">
+                        {submitError}
+                      </div>
+                    )}
+
+                    <button 
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full mt-2 py-4 rounded-xl bg-[#EA580C] hover:bg-[#ff7233] text-white font-extrabold uppercase tracking-wider transition-all duration-300 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer shadow-[0_4px_15px_rgba(234,88,12,0.3)]"
                     >
-                      <option value="">Select Source</option>
-                      <option value="google">Google</option>
-                      <option value="linkedin">LinkedIn</option>
-                      <option value="instagram">Instagram</option>
-                      <option value="recommendation">Recommendation</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-
-                  {/* Message */}
-                  <div className="text-left">
-                    <label className="text-[9px] font-bold text-gray-500 block mb-1">MESSAGE</label>
-                    <textarea 
-                      name="message" 
-                      value={formData.message} 
-                      onChange={handleInputChange} 
-                      rows="3" 
-                      placeholder="Tell us about your brand goals..." 
-                      className="w-full p-3.5 rounded-xl bg-white/[0.02] border border-white/10 outline-none text-white text-xs placeholder:text-gray-600 focus:border-[#EA580C]/45 transition-colors"
-                    ></textarea>
-                  </div>
-
-                  {submitError && (
-                    <div className="p-3.5 rounded-xl bg-rose-950/30 border border-rose-900/50 text-rose-400 text-xs text-center font-medium">
-                      {submitError}
-                    </div>
-                  )}
-
-                  <button 
-                    type="submit" 
-                    disabled={isSubmitting}
-                    className="w-full py-4 rounded-xl bg-[#EA580C] text-white font-extrabold hover:bg-[#ff7233] transition-all duration-300 shadow-[0_4px_20px_rgba(234,88,12,0.3)] disabled:opacity-50 cursor-pointer text-center uppercase tracking-wider text-xs sm:text-sm"
-                  >
-                    {isSubmitting ? 'Submitting Request...' : 'Submit Audit Request'}
-                  </button>
-                </form>
-              )}
+                      {isSubmitting ? 'Sending Request...' : 'Claim My Free Audit'}
+                      <span className="text-sm">→</span>
+                    </button>
+                    
+                  </form>
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}
@@ -2572,41 +2872,51 @@ export default function PortfolioWebsite() {
                 D905, Titanium Business Park, Makarba,<br />
                 Ahmedabad, Gujarat 380051
               </p>
-              <a href="mailto:sales@d2cgrow.com" className="text-gray-400 hover:text-[#EA580C] transition-colors block font-mono">
-                sales@d2cgrow.com
+              <a href="mailto:d2cgrow@gmail.com" className="text-gray-400 hover:text-[#EA580C] transition-colors block font-mono">
+                d2cgrow@gmail.com
               </a>
             </div>
             
             {/* Social Icons matching Peak Pilots footer */}
             <div className="flex items-center gap-3 pt-2">
               <a 
-                href="https://linkedin.com" 
-                target="_blank" 
-                rel="noopener noreferrer" 
+                href="tel:+919352234643" 
                 className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.02] hover:border-[#EA580C] hover:bg-[#EA580C]/5 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300"
+                title="Call Us"
               >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.779-1.75-1.75s.784-1.75 1.75-1.75 1.75.779 1.75 1.75-.784 1.75-1.75 1.75zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.387a12.035 12.035 0 01-7.108-7.108c-.155-.44.011-.927.387-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.11-1.008H5.03c-1.137 0-2.054.924-2.054 2.054V6.75z" />
                 </svg>
               </a>
               <a 
-                href="https://twitter.com" 
-                target="_blank" 
-                rel="noopener noreferrer" 
+                href="mailto:d2cgrow@gmail.com" 
                 className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.02] hover:border-[#EA580C] hover:bg-[#EA580C]/5 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300"
+                title="Email Us"
               >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                 </svg>
               </a>
               <a 
-                href="https://instagram.com" 
+                href="https://www.instagram.com/d2cgrow/" 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.02] hover:border-[#EA580C] hover:bg-[#EA580C]/5 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300"
+                title="Instagram"
               >
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                   <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                </svg>
+              </a>
+              <a 
+                href="https://www.linkedin.com/company/d2cgrow/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="w-9 h-9 rounded-xl border border-white/10 bg-white/[0.02] hover:border-[#EA580C] hover:bg-[#EA580C]/5 flex items-center justify-center text-gray-400 hover:text-white transition-all duration-300"
+                title="LinkedIn"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.779-1.75-1.75s.784-1.75 1.75-1.75 1.75.779 1.75 1.75-.784 1.75-1.75 1.75zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
                 </svg>
               </a>
             </div>
@@ -2616,12 +2926,12 @@ export default function PortfolioWebsite() {
           <div className="lg:col-span-3 space-y-4">
             <h3 className="text-white font-bold tracking-widest text-xs uppercase font-mono">SERVICES</h3>
             <ul className="space-y-2 text-xs font-light">
-              <li><a href="#services" className="hover:text-white transition-colors duration-300">Free Consultation</a></li>
-              <li><a href="#services" className="hover:text-white transition-colors duration-300">Meta Ads</a></li>
-              <li><a href="#services" className="hover:text-white transition-colors duration-300">Google Ads</a></li>
-              <li><a href="#services" className="hover:text-white transition-colors duration-300">Creative Strategy</a></li>
-              <li><a href="#services" className="hover:text-white transition-colors duration-300">CRO</a></li>
-              <li><a href="#services" className="hover:text-white transition-colors duration-300">Retention Marketing</a></li>
+              <li><a href="#promises" onClick={() => { setActiveSubPage(null); setTimeout(() => document.getElementById('promises')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-white transition-colors duration-300">Free Consultation</a></li>
+              <li><a href="#services" onClick={() => { setActiveSubPage(null); setTimeout(() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-white transition-colors duration-300">Meta Ads</a></li>
+              <li><a href="#services" onClick={() => { setActiveSubPage(null); setTimeout(() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-white transition-colors duration-300">Google Ads</a></li>
+              <li><a href="#services" onClick={() => { setActiveSubPage(null); setTimeout(() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-white transition-colors duration-300">Creative Strategy</a></li>
+              <li><a href="#services" onClick={() => { setActiveSubPage(null); setTimeout(() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-white transition-colors duration-300">CRO</a></li>
+              <li><a href="#services" onClick={() => { setActiveSubPage(null); setTimeout(() => document.getElementById('services')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-white transition-colors duration-300">Retention Marketing</a></li>
             </ul>
           </div>
 
@@ -2629,9 +2939,9 @@ export default function PortfolioWebsite() {
           <div className="lg:col-span-3 space-y-4">
             <h3 className="text-white font-bold tracking-widest text-xs uppercase font-mono">COMPANY</h3>
             <ul className="space-y-2 text-xs font-light">
-              <li><a href="#about" className="hover:text-white transition-colors duration-300">About</a></li>
-              <li><a href="#projects" className="hover:text-white transition-colors duration-300">Results</a></li>
-              <li><a href="#contact" onClick={(e) => { e.preventDefault(); document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }) }} className="hover:text-white transition-colors duration-300">Contact</a></li>
+              <li><a href="#about" onClick={(e) => { e.preventDefault(); setActiveSubPage('about'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-white transition-colors duration-300">About</a></li>
+              <li><a href="#projects" onClick={() => { setActiveSubPage(null); setTimeout(() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-white transition-colors duration-300">Results</a></li>
+              <li><a href="#contact" onClick={(e) => { e.preventDefault(); setActiveSubPage(null); setTimeout(() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' }), 100); }} className="hover:text-white transition-colors duration-300">Contact</a></li>
             </ul>
           </div>
 
@@ -2648,19 +2958,15 @@ export default function PortfolioWebsite() {
                 </button>
               </li>
               <li>
-                <a 
-                  href="#contact" 
-                  onClick={(e) => {
-                    e.preventDefault()
-                    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })
-                  }}
-                  className="hover:text-white transition-colors duration-300"
+                <button
+                  onClick={() => setShowEmailForm(true)}
+                  className="hover:text-white transition-colors duration-300 bg-transparent border-none p-0 cursor-pointer outline-none text-left"
                 >
                   Book a Call
-                </a>
+                </button>
               </li>
-              <li><a href="#terms" className="hover:text-white transition-colors duration-300">Terms of Service</a></li>
-              <li><a href="#privacy" className="hover:text-white transition-colors duration-300">Privacy Policy</a></li>
+              <li><a href="#terms" onClick={(e) => { e.preventDefault(); setActiveSubPage('terms'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-white transition-colors duration-300">Terms of Service</a></li>
+              <li><a href="#privacy" onClick={(e) => { e.preventDefault(); setActiveSubPage('privacy'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-white transition-colors duration-300">Privacy Policy</a></li>
             </ul>
           </div>
 
@@ -2670,8 +2976,8 @@ export default function PortfolioWebsite() {
         <div className="max-w-6xl mx-auto px-6 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between text-xs text-gray-600 font-light">
           <p>© 2026 D2cGrow. Built for your brand growth.</p>
           <div className="flex gap-6 mt-4 sm:mt-0 font-mono">
-            <a href="#privacy" className="hover:text-white transition-colors duration-300">Privacy Policy</a>
-            <a href="#terms" className="hover:text-white transition-colors duration-300">Terms of Service</a>
+            <a href="#privacy" onClick={(e) => { e.preventDefault(); setActiveSubPage('privacy'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-white transition-colors duration-300">Privacy Policy</a>
+            <a href="#terms" onClick={(e) => { e.preventDefault(); setActiveSubPage('terms'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-white transition-colors duration-300">Terms of Service</a>
           </div>
         </div>
       </footer>
